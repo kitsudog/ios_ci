@@ -1,0 +1,24 @@
+#[[source]]
+#name = "pypi"
+#url = "https://pypi.org/simple"
+#verify_ssl = true
+
+[dev-packages]
+
+[packages]
+gevent = "*"
+django = "==2.0.1"
+django-suit = "==0.2.25"
+requests = "*"
+xmltodict = "*"
+uwsgi = "*"
+rsa = "==3.4.2"
+pycrypto = "==2.6.1"
+pymongo = "*"
+redis = "*"
+hyper = "*"
+mysqlclient = "*"
+biplist = "*"
+
+[requires]
+python_version = "3.6"
