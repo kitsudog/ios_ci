@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # 为click框架初始化一下
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -18,6 +19,12 @@ function patch_suit(){
 patch_suit
 
 python3.6 manage.py collectstatic --no-input
+python3.6 manage.py makemigrations --noinput
+python3.6 manage.py migrate
+
+# todo: celery -B 只用于debug模式
+nohup celery worker -A loop -B --loglevel INFO --logfile /var/log/server/celery.log &
+
 if [ ${UWSGI:-FALSE} = "TRUE" -o ${VIRTUAL_PROTO:-http} = "uwsgi" ]
 then
     uwsgi --socket :8000 --gevent --gevent-monkey-patch --module open.wsgi  --async 100 --http-keepalive --chmod-socket=664

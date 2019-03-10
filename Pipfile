@@ -19,6 +19,8 @@ redis = "*"
 hyper = "*"
 mysqlclient = "*"
 biplist = "*"
+celery = "==4.1.1"
+uncurl = "*"
 
 [requires]
 python_version = "3.6"

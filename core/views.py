@@ -1,6 +1,5 @@
 # Create your views here.
 import os
-import time
 
 from django.http import HttpResponse
 
@@ -32,7 +31,6 @@ def static(request):
             content = fin.read()
         ext = request.path.rpartition(".")[-1]
         return HttpResponse(content, content_type=mime.get(ext, "text/plain"))
-    time.sleep(5)
     return HttpResponse("", status=404)
 
 

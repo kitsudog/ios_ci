@@ -1,18 +1,17 @@
 import inspect
-from abc import abstractmethod
+import json
+from datetime import datetime
 from typing import Tuple, List, Mapping, Type, Dict, Callable
 
 from django.http import HttpResponse, HttpRequest
 
-from base.style import Fail, json_str
-from base.utils import str_to_bool
+from base.style import Fail, json_str, ExJSONEncoder, Trace
+from base.utils import str_to_bool, DecorateHelper
 
 
 def get_data(value: str, hint_type: Type, default_value: any = None) -> any:
     if hint_type is bool:
         return str_to_bool(value)
-    elif hint_type is int:
-        return int(value)
     return value
 
 
@@ -55,6 +54,13 @@ def to_simple_str_dict(orig: Mapping[str, List[str]]) -> Dict[str, str]:
     return ret
 
 
+class DjangoExJSONEncoder(ExJSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime):
+            return int(o.timestamp() * 1000)
+        super().default(o)
+
+
 def to_response(ret: any, req: HttpRequest = None) -> HttpResponse:
     if isinstance(ret, HttpResponse):
         return ret
@@ -73,127 +79,137 @@ def to_response(ret: any, req: HttpRequest = None) -> HttpResponse:
     rsp = HttpResponse(json_str({
         "ret": 0,
         "result": ret
-    }), content_type="application/json")
+    }, cls=DjangoExJSONEncoder), content_type="application/json")
     rsp["Access-Control-Allow-Origin"] = "*"
     rsp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return rsp
 
 
-# noinspection PyPep8Naming
-def Action(func):
-    # todo: 反射处理
-    spec = inspect.getfullargspec(func)
-    default_params, params_hints = inject_params(spec.args, spec.defaults, spec.annotations)
-    params_key = list(zip(*params_hints))
-    params_key = params_key[0] if len(params_key) else []
-    req_inject_func = []  # type:List[Callable[[HttpRequest],Dict]]
-    inject_func = []  # type:List[Callable[[Dict],Any]]
-    last_inject_func = []  # type:List[Callable[[Dict],Any]]
-    if "_ip" in params_key:
-        def _func(req: HttpRequest, params: Dict):
-            if "HTTP_X_FORWARDED_FOR" in req.META:
-                ip = req.META['HTTP_X_FORWARDED_FOR']
-            else:
-                ip = req.META['REMOTE_ADDR']
-            params["_ip"] = ip
+# noinspection PyAttributeOutsideInit
+class DjangoAction(DecorateHelper):
 
-        req_inject_func.append(_func)
-    if "_path" in params_key:
-        def _func(req: HttpRequest, params: Dict):
-            params["_path"] = req.path
+    def prepare(self):
+        self.func_title = "%s.%s" % (self.func.__module__.split(".")[-1], self.func.__name__)
+        self._is_action = True
+        self._orig_func = self.func
+        self.default_params = {}
+        self.params_hints = {}
 
-        req_inject_func.append(_func)
+    def wrapper(self, request, *args, **kwargs):
+        return HttpResponse(json_str(self.func(request)))
 
-    if "_req" in params_key:
-        def _func(req: HttpRequest, params: Dict):
-            params["_req"] = req
 
-        req_inject_func.append(_func)
+# noinspection PyPep8Naming,PyAttributeOutsideInit
+class Action(DjangoAction):
 
-    if "_content" in params_key:
-        def _func(req: HttpRequest, params: Dict):
-            params["_content"] = req.body
+    def pre_wrapper(self, request: HttpRequest, orig_params, *args, **kwargs):
+        pass
 
-        req_inject_func.append(_func)
+    def prepare(self):
+        super().prepare()
+        # todo: 反射处理
+        spec = inspect.getfullargspec(self.func)
+        self.default_params, self.params_hints = inject_params(spec.args, spec.defaults, spec.annotations)
+        params_key = list(zip(*self.params_hints))
+        params_key = params_key[0] if len(params_key) else []
+        self.req_inject_func = []  # type:List[Callable[[HttpRequest],Dict]]
+        self.inject_func = []  # type:List[Callable[[Dict],None]]
+        self.last_inject_func = []  # type:List[Callable[[Dict],None]]
+        if "_ip" in params_key:
+            def _func(req: HttpRequest, params: Dict):
+                if "HTTP_X_FORWARDED_FOR" in req.META:
+                    ip = req.META['HTTP_X_FORWARDED_FOR']
+                else:
+                    ip = req.META['REMOTE_ADDR']
+                params["_ip"] = ip
 
-    if "_orig" in params_key:
-        def _func(req: Dict, params: Dict):
-            params["_orig"] = req
+            self.req_inject_func.append(_func)
+        if "_path" in params_key:
+            def _func(req: HttpRequest, params: Dict):
+                params["_path"] = req.path
 
-        inject_func.append(_func)
+            self.req_inject_func.append(_func)
 
-    if "_params" in params_key:
-        # noinspection PyUnusedLocal
-        def _func(req: Dict, params: Dict):
-            params["_params"] = dict(params)
+        if "_req" in params_key:
+            def _func(req: HttpRequest, params: Dict):
+                params["_req"] = req
 
-        last_inject_func.append(_func)
+            self.req_inject_func.append(_func)
 
-    # noinspection PyTypeChecker
-    def wrapper(req: Tuple[HttpRequest, Mapping]):
+        if "_content" in params_key:
+            def _func(req: HttpRequest, params: Dict):
+                params["_content"] = req.body
+
+            self.req_inject_func.append(_func)
+
+        if "_orig" in params_key:
+            def _func(req: Dict, params: Dict):
+                params["_orig"] = req
+
+            self.inject_func.append(_func)
+
+        if "_params" in params_key:
+            # noinspection PyUnusedLocal
+            def _func(req: Dict, params: Dict):
+                params["_params"] = dict(params)
+
+            self.last_inject_func.append(_func)
+
+    def wrapper(self, req: HttpRequest, *args, **kwargs):
         is_req = isinstance(req, HttpRequest)
         if is_req:
             orig_params = {}
-            orig_params.update(default_params)
+            orig_params.update(self.default_params)
             if len(req.POST):
                 orig_params.update(to_simple_str_dict(req.POST))
             if len(req.GET):
                 orig_params.update(to_simple_str_dict(req.GET))
             if len(req.FILES):
-                orig_params.update(req.FILES)
+                for f, c in req.FILES.items():
+                    orig_params[f] = c.read()
             if len(req.COOKIES):
                 for k, v in req.COOKIES.items():
                     orig_params["$c_%s" % k] = v
+            if "json" in req.META.get("CONTENT_TYPE", "") and len(req.body):
+                orig_params.update(json.loads(req.body.decode('utf8')))
             req._orig_params = orig_params
         else:
-            orig_params = dict(default_params)
+            orig_params = dict(self.default_params)
             orig_params.update(req)
-        if len(params_hints):
-            params = {}
+
+        pre_ret = self.pre_wrapper(req, orig_params, *args, **kwargs)
+        if pre_ret is not None:
+            if pre_ret is True:
+                pass
+            else:
+                return pre_ret
+        params = {}
+        if len(self.params_hints):
             if is_req:
-                for each in req_inject_func:
+                for each in self.req_inject_func:
                     each(req, params)
-            for each in inject_func:
+            for each in self.inject_func:
                 each(orig_params, params)
-            for k, hint in params_hints:  # type: Tuple[str,any]
+            for k, hint in self.params_hints:  # type:Tuple[str,any]
                 if k.startswith("_"):
                     continue
                 if k not in orig_params:
                     raise Fail("缺少参数[%s]" % k)
                 params[k] = get_data(orig_params[k], hint)
-            for each in last_inject_func:
+            for each in self.last_inject_func:
                 each(orig_params, params)
-            ret = func(**params)
-        else:
-            ret = func()
-        if ret is None:
-            ret = {"succ": True}
+        try:
+            ret = self.func(**params)
+        except Exception as e:
+            # _be_log = req._log if is_req else req.get("_log")  # type:BeLog
+            # if _be_log:
+            #     _be_log.ret = str(e)
+            Trace("出现异常", e)
+            raise e
+        finally:
+            # with Block("处理log部分", fail=False):
+            #     _be_log = req._log if is_req else req.get("_log")  # type:BeLog
+            #     if _be_log:
+            #         _be_log.save()
+            pass
         return ret
-
-    wrapper._is_action = True
-    return wrapper
-
-
-def HttpAction(func):
-    _wrapper = Action(func)
-
-    def wrapper(req):
-        return to_response(_wrapper(req))
-
-    return wrapper
-
-
-class Handler:
-    def __init__(self, req):
-        self._req = req
-
-    @abstractmethod
-    def do(self):
-        pass
-
-    @classmethod
-    def action(cls):
-        def func(req):
-            return to_response(cls(req).do())
-
-        return func

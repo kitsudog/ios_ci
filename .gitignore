@@ -9,4 +9,6 @@ out
 gen
 */migrations/0*
 /logs
-/income
+/static/income
+/tools/logs
+/tools/package
