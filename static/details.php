@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+        <meta name="version" content="1">
+
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="2048">
+        <meta property="og:description" content="2048">
+        <meta property="og:image" content="https://www.itunesappstore.cn/ioshelper/../files//15478805351196899546-2048.png">
+        <meta property="og:url" content="https://www.itunesappstore.cn/ioshelper/details.php?appid=49fe4500-1bb6-11e9-a70a-00163e0e27d5">
+
+        <link rel="shortcut icon" href="../files//15478805351196899546-2048.png">
+
+        <title>2048</title>
+
+        <link integrity="" rel="stylesheet" href="css/base.css?v=2.1">
+        <link rel="stylesheet" type="text/css" href="css/popup.css?v=2.1" />
+        <link rel="stylesheet" type="text/css" href="css/udid.css?v=2.1" />
+        <link rel="stylesheet" type="text/css" href="css/animate.min.css?v=2.1" />
+        <script type="text/javascript" src="js/mod.js?v=2.1"></script>
+
+        <style type="text/css">
+            .page_loading_background {
+                cursor: wait;
+                display: block;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,.5);
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 10001;
+            }
+            .page_loading_inner {
+                color: #666;
+                font-size: 16px;
+                position: absolute;
+                z-index: 10001;
+                border: 1px solid rgb(187, 187, 187);
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: auto;
+                height: 80px;
+                line-height: 78px;
+                padding-left: 16px;
+                padding-right: 20px;
+                background: #fff;
+                cursor: pointer;
+                border-radius: 8px;
+                background-repeat: no-repeat;
+                background-position: 8px 50%;
+                box-shadow: 0 1px 15px rgba(0,0,0,.175);
+            }
+            .page_loading_inner i { font-size: 24px; }
+
+            .invert_btn_txt {
+                background: inherit;
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                text-align: center;
+                filter: invert(1) grayscale(1) contrast(10);
+            }
+        </style>
+        <script type="text/javascript">
+                    </script>
+    </head>
+    <body>
+        <div id="loading_background" class="page_loading_background" style="display: none;">
+            <div class="page_loading_inner">
+                <i class="fa fa-spinner fa-spin animated"></i> 正在加载中…
+            </div>
+        </div>
+        <script type="text/javascript">
+            rsid = 0;
+            document.onreadystatechange = documentReadyState;
+            function documentReadyState() {
+                if (document.readyState == "complete") {
+                    completed();
+                    window.clearInterval(rsid);
+                } else {
+                    document.getElementById('loading_background').style='';
+                }
+            }
+            function completed() {
+                document.getElementById('loading_background').style='display: none;left: -10000px;';
+                document.getElementById('loading_background').remove();
+            }
+            rsid = window.setInterval(documentReadyState,1000);
+        </script>
+
+        <div style=" overflow:hidden; width:0px; height:0; margin:0 auto; position:absolute; top:-800px;"><img src=""></div>
+        <nav id="localnav" class="localnav" style="display: none;">
+            <div class="localnav-background">
+            </div>
+            <div class="localnav-content"><h2 class="localnav-title localnav-content-h2">App Store 预览</h2></div>
+        </nav>
+        <div>
+            <section class="l-content-width section section--hero">
+                <div style="display: inline-block;width: 32vw;vertical-align: top;">
+                    <div id="appdetails-icon" class="appdetails-icon small-5" style="width: 100%;">
+                        <div class="ios-app-icon">
+                            <img class="ios-app-icon-img" src="../files//15478805351196899546-2048.png" style="background-color: #fefefe;" alt>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: inline-block;width: 52vw;vertical-align: top;margin-left: 8px;">
+                    <div>
+                        <div class="ios-app-brief">
+                            <header class="ios-app-brief-header">
+                                <h1 class="ios-app-title" style="font-size: 20px;height: 1.2223em;width: 50vw;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">2048                                    <span class="ios-app-title-cls" style="display: none;">18+</span>
+                                </h1>
+                                <h2 class="ios-app-subtitle" style="font-size: 14px;">2048</h2>
+                                <h2 class="ios-app-vendor" style="font-size: 14px;"><a href="javascript:;">测试广告主</a></h2>
+                            </header>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="position: absolute;">
+                            <ul class="ios-app-recom" style="width:100%">
+                                <li id="install_btn_container" class="install-btn-container " style="display: inline-block;">
+                                    <div style="width: 20px;height: 20px;padding: 4px;border-width: 1px;">Loading</div>
+                                                                        <div style="width: 88px;">
+                                        <a data-ios-down-new="1" auto-open="1" s1="b92ca73d-223f-11e9-a70a-00163e0e27d5" id="ios-download" href="javascript:;" style="color: #FFF;" onclick="require('components/udid/udid').installUDID()">免费安装</a>
+                                    </div>
+                                                                        <div>正在授权应用 <span id="install_tips_progress">0%</span> <span style="color: #0070c9;">请等待授权完成</span></div>
+                                </li>
+                                <a id="trylink" href="fkapp10058://openApp" style="width: 0px;display: none;"></a>
+                                <!-- <li id="showhelp" class="ios-app-install-btn" style="width: 28px;position: relative;float: right;top: 0px;right: 10px;display: none;" onclick="document.all['pagemask'].style.display='block';document.body.style.height='100%';document.body.style.overflow='hidden';this.style.backgroundColor='darkgray';this.style.borderColor='darkgray';$('#moremenu').addClass('showmore_anim');">?</li> -->
+                            </ul>
+                        </div>
+                                                <div id="showhelp" class="ios-app-install-btn" style="width: 28px;position: relative;float: right;right: 10px;" onclick="require('components/udid/udid').hasGuideInstall()">?</div>
+                                            </div>
+                </div>
+            </section>
+            <section class="l-content-width">
+                <div class="ios-app-rating" style="width:45%">
+                    <figure class="ios-app-rating">
+                        <figcaption class="ios-app-rating-caption-big"></figcaption>
+                        <span class="ios-app-rating-star-outline-big vertical_mid">
+                            <span class="ios-app-rating-stars-big ios-app-rating-stars-big-"></span>
+                        </span>
+                    </figure>
+                    <h5 class="ios-caption-subtitle"> 个评分</h5>
+                </div>
+                <div class="ios-app-rating" style="width:25%; text-align: center;">
+                    <div class="ios-app-rating-caption-big"><font style="vertical-align: super;font-size: 12px">#</font>1</div>
+                    <h5 class="ios-caption-subtitle">2048</h5>
+                </div>
+                <div class="ios-app-rating" style="width:25%; text-align: right;">
+                    <div class="ios-app-rating-caption-big">18+</div>
+                    <h5 class="ios-caption-subtitle">年龄</h5>
+                </div>
+            </section>
+            <section class="l-content-width section">
+                <!-- <h2 class="section__headline">iPhone 屏幕快照</h2> -->
+                <ul class="ios-app-screenshot-viewer">
+                                    </ul>
+            </section>
+            <section class="l-content-width section section--bordered">
+                <h2 class="section__headline">简介</h2>
+                <div class="ellipsis">
+                    <div class="ellipsis-container">
+                        <div class="ellipsis-content">
+                            2048                        </div>
+                        <div class="ellipsis-ghost">
+                            <div class="ellipsis-placeholder"></div>
+                            <div class="ellipsis-more" style="background-image: linear-gradient(to right , #ffffff00, #ffffffff 40%);">更多</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="l-content-width section section--bordered">
+                <h2 class="section__headline">评分及评论</h2>
+                <div class="ios-app-cust-ratings">
+                    <div class="ios-app-cust-ratings_stats">
+                        <h3 class="ios-app-ratings_avg">
+                            <span class="ios-app-ratings_avg_disp"></span>
+                            满分 5 分
+                        </h3>
+                    </div>
+                    <div class="ios-app-ratings-bars">
+                        <figure>
+                            <div class="ios-app-ratings-bar-row">
+                                <span class="ios-app-rating-stargraph__stars ios-app-rating-stargraph__stars-5"></span>
+                                <div class="ios-app-rating-bargraph__bar">
+                                    <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                                </div>
+                            </div>
+                            <div class="ios-app-ratings-bar-row">
+                                <span class="ios-app-rating-stargraph__stars ios-app-rating-stargraph__stars-4"></span>
+                                <div class="ios-app-rating-bargraph__bar">
+                                    <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                                </div>
+                            </div>
+                            <div class="ios-app-ratings-bar-row">
+                                <span class="ios-app-rating-stargraph__stars ios-app-rating-stargraph__stars-3"></span>
+                                <div class="ios-app-rating-bargraph__bar">
+                                    <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                                </div>
+                            </div>
+                            <div class="ios-app-ratings-bar-row">
+                                <span class="ios-app-rating-stargraph__stars ios-app-rating-stargraph__stars-2"></span>
+                                <div class="ios-app-rating-bargraph__bar">
+                                    <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                                </div>
+                            </div>
+                            <div class="ios-app-ratings-bar-row">
+                                <span class="ios-app-rating-stargraph__stars "></span>
+                                <div class="ios-app-rating-bargraph__bar">
+                                    <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                                </div>
+                            </div>
+                        </figure>
+                        <h5 class="ios-app-rating-count"> 个评分</h5>
+                    </div>
+                </div>
+                <div class="ios-app-comments-list">
+                                    </div>
+            </section>
+            <section class="l-content-width section section--bordered">
+                <h2 class="section__headline">新功能</h2>
+                <div class="ios-app-whatsnew-content ios-app-whatsnew-latest">
+                    <p class="">版本 1.0.0.101</p>
+                </div>
+                <div class="ios-app-whatsnew-content">
+                    <span class="we-clamp__contents">-</span>
+                </div>
+            </section>
+            <section class="l-content-width section section--bordered">
+                <h2 class="section__headline">信息</h2>
+                <dl class="ios-app-infor-list">
+                    <div class="ios-app-infor-list_row row-bottom-border">
+                        <dt class="ios-app-infor-list_row_term">销售商</dt>
+                        <dd class="ios-app-infor-list_row_val">测试广告主</dd>
+                    </div>
+                    <div class="ios-app-infor-list_row row-bottom-border">
+                        <dt class="ios-app-infor-list_row_term">大小</dt>
+                        <dd class="ios-app-infor-list_row_val">223018 KB</dd>
+                    </div>
+                    <div class="ios-app-infor-list_row row-bottom-border">
+                        <dt class="ios-app-infor-list_row_term">类别</dt>
+                        <dd class="ios-app-infor-list_row_val"><a href="javascript:;">游戏</a></dd>
+                    </div>
+                    <div class="ios-app-infor-list_row row-bottom-border">
+                        <dt class="ios-app-infor-list_row_term">兼容性</dt>
+                        <dd class="ios-app-infor-list_row_val"><div class="we-clamp"><span>需要 iOS 8.0 或更高版本。与 iPhone、iPad 和 iPod touch 兼容。</span></div></dd>
+                    </div>
+                    <div class="ios-app-infor-list_row row-bottom-border">
+                        <dt class="ios-app-infor-list_row_term">语言</dt>
+                        <dd class="ios-app-infor-list_row_val"><div class="we-clamp"><span>英语,简体中文</span></div></dd>
+                    </div>
+                    <div class="ios-app-infor-list_row row-bottom-border">
+                        <dt class="ios-app-infor-list_row_term">年龄分级</dt>
+                        <dd class="ios-app-infor-list_row_val">限18岁以上</dd>
+                    </div>
+                    <div class="ios-app-infor-list_row row-bottom-border">
+                        <dt class="ios-app-infor-list_row_term">Copyright</dt>
+                        <dd class="ios-app-infor-list_row_val">2048</dd>
+                    </div>
+                    <div class="ios-app-infor-list_row row-bottom-border">
+                        <dt class="ios-app-infor-list_row_term">价格</dt>
+                        <dd class="ios-app-infor-list_row_val">免费</dd>
+                    </div>
+                    <div class="ios-app-infor-list_row">
+                        <dt class="ios-app-infor-list_row_term"><a href="javascript:;">隐私政策</a></dt>
+                        <dd class="ios-app-infor-list_row_val">✋</dd>
+                    </div>
+                </dl>
+            </section>
+        </div>
+
+<!-- 弹窗 -->
+        <div class="m-xx-tap">
+            <a data-android-down="1" class="down android"></a>
+            <a data-ios-down="1" class="down ios"></a>
+        </div>
+        <script type="text/javascript" src="js/mod.js?v=2.1"></script>
+        <script type="text/javascript">/*resourcemap*/
+            require.resourceMap({
+              "res": {
+                "components/popup/popup": {
+                  "url": "js/app.js?v=2.1",
+                  "type": "js"
+                },
+                "components/udid/_guideInstall": {
+                  "url": "js/app.js?v=2.1",
+                  "type": "js",
+                  "deps": [
+                    "components/popup/popup"
+                  ]
+                },
+                "components/udid/_profileExplain": {
+                  "url": "js/app.js?v=2.1",
+                  "type": "js",
+                  "deps": [
+                    "components/popup/popup"
+                  ]
+                },
+                "components/udid/udid": {
+                  "url": "js/app.js?v=2.1",
+                  "type": "js",
+                  "deps": [
+                    "components/popup/popup",
+                    "components/udid/_guideInstall",
+                    "components/udid/_profileExplain"
+                  ]
+                },
+                "page/m/m": {
+                  "url": "js/app.js?v=2.1",
+                  "type": "js",
+                  "deps": [
+                    "components/udid/udid"
+                  ]
+                }
+              },
+              "pkg": {}
+            });
+        </script>
+        <script type="text/javascript" src="js/globle.js?v=2.1"></script>
+        <script type="text/javascript" src="js/jquery.js?v=2.1"></script>
+        <script type="text/javascript" src="js/swipe.js?v=2.1"></script>
+        <script charset="utf-8" src="js/qrcode.js?v=2.1"></script>
+        <script>
+            require(['page/m/m']);
+            if (G.platform.isSafari) {
+                $(function(){
+                                            window.setTimeout(function (){
+                            $('[auto-open=1]').click();
+                        }, 7*1000);
+                                    });
+            }
+        </script>
+                        <div id="pagemask" style="background-color: rgba(0, 0, 0, 0.6);width: 100%;height: 100%;left: 0;top: 0;position: absolute;z-index: 9999;display: none;" onclick="this.style.display='none';document.body.style.height='';document.body.style.overflow='';$('#showmore').css('background-color','');$('#showmore').css('border-color','');$('#moremenu').removeClass('showmore_anim');">
+            <div id="moremenu" style="position: relative;top: 98%;">
+            <ul style=" background-color: rgba(255, 255, 255, 0.94);position: relative;width: 96vw;display: inline-block;left: 2vw;top: 0px;border-radius: 8px;z-index: 9999;">
+<!--                 <li style="border-bottom: 1px solid #e5e5e5;padding: 2.86vw;">
+                    <ul style="font-size: 16px;color: #0070c9;font-weight: 100;">
+                        <li style=" list-style-type: none;display: inline-block;">分享 App...</li>
+                        <li style=" list-style-type: none;display: inline-block;float: right;"><img src="share.png" style="width: 30px;float: left;bottom: 8px;position: relative;right: 0px;px;"></li>
+                    </ul>
+                </li> -->
+                <li style="padding: 2.86vw;">
+                    <ul style="font-size: 16px;color: #0070c9;font-weight: 100;">更多来自此开发者的App</ul>
+                    <ul></ul>
+                </li>
+            </ul>
+            <ul style=" background-color: rgba(255, 255, 255, 0.94);position: relative;width: 96vw;display: inline-block;left: 2vw;top: 12px;border-radius: 8px;z-index: 9999;">
+                <li style="padding: 2.86vw;">
+                    <ul style="font-size: 16px;color: #0070c9;font-weight: 600;text-align: center;">取消</ul>
+                </li>
+            </ul>
+            </div>
+        </div>
+
+        <div style="background-color: #eee;padding: 7px;line-height: 1.5em;font-size: 10px;color: darkgray;">
+            免责声明：<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;本网站仅为开发者提供App的下载和安装托管，App内的内容和运营相关事项由App开发者负责，与本网站无关
+        </div>
+    </body>
+</html>

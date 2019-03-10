@@ -1,0 +1,145 @@
+.popup-template-swipe {
+    overflow: hidden;
+    visibility: hidden;
+    position: relative
+}
+
+.popup-template-swipe .swipe-wrap {
+    overflow: hidden;
+    position: relative
+}
+
+.popup-template-swipe .swipe-wrap > div {
+    float: left;
+    width: 100%;
+    position: relative
+}
+
+.popup-template-swipe .swipe-wrap-con {
+    background-color: #fff;
+    color: #1e93ff;
+    text-align: center;
+    line-height: 1.5;
+    padding-top: 10px
+}
+
+.popup-template-swipe .swipe-wrap-index {
+    text-align: center;
+    position: relative
+}
+
+.popup-template-swipe .swipe-wrap-index span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #def1ff;
+    margin: 0 5px;
+    -webkit-border-radius: 50%;
+    border-radius: 50%
+}
+
+.popup-template-swipe .swipe-wrap-index span.on {
+    background: #70c2fe
+}
+
+.popup-template-swipe .swipe-wrap-desc {
+    color: #4ba8fd
+}
+
+.popup-template .operation {
+    border: 0;
+    padding-bottom: 10px
+}
+
+.popup-template .pop-dialog-btn {
+    display: block;
+    width: 82%;
+    margin: 10px auto;
+    border: 0;
+    color: #fff;
+    -webkit-border-radius: 40px;
+    border-radius: 40px;
+    font-size: 15px;
+    padding: 9px 0
+}
+
+.popup-template .pop-dialog-sure {
+    background-image: -webkit-linear-gradient(right, #0acffe, #3c7bff);
+    background-image: -webkit-gradient(linear, right top, left top, from(#0acffe), to(#3c7bff));
+    background-image: -moz-linear-gradient(right, #0acffe, #3c7bff);
+    background-image: linear-gradient(to left, #0acffe, #3c7bff)
+}
+
+.popup-template .pop-dialog-sure2 {
+    background-image: -webkit-linear-gradient(right, #5bd84e, #4bba29);
+    background-image: -webkit-gradient(linear, right top, left top, from(#5bd84e), to(#4bba29));
+    background-image: -moz-linear-gradient(right, #5bd84e, #4bba29);
+    background-image: linear-gradient(to left, #5bd84e, #4bba29)
+}
+
+.popup-template .pop-dialog-cancel {
+    color: #1e93ff;
+    border: #1e93ff 1px solid;
+    padding: 8px 0
+}
+
+.popup-template .btn-desc {
+    color: #dfdfdf;
+    font-size: 12px;
+    text-align: center;
+    padding-bottom: 10px
+}
+
+.popup-template .btn-desc a {
+    color: #1daafc
+}
+
+.popup-template-explain {
+    padding: 10px;
+    overflow: scroll
+}
+
+.popup-template-explain .pop-dialog-title {
+    padding-bottom: 10px
+}
+
+.popup-template-explain .explain-title {
+    color: #333
+}
+
+.popup-template-explain .explain-desc {
+    color: #777
+}
+
+.popup-template-explain .title {
+    font-size: 15px;
+    font-weight: 700;
+    padding-bottom: 5px
+}
+
+.popup-template-explain .x-item {
+    padding: 5px 0
+}
+
+.popup-template-explain .x-item p {
+    margin: 5px 0
+}
+
+.popup-template-explain .item-child span {
+    display: -webkit-box;
+    display: box
+}
+
+.popup-template-explain .item-child span .left {
+    display: block;
+    width: 25px;
+    text-align: right;
+    margin-right: 5px
+}
+
+.popup-template-explain .item-child span .right {
+    display: block;
+    -webkit-box-flex: 1;
+    box-flex: 1
+}
+
