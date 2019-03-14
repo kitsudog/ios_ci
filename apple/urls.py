@@ -1,6 +1,7 @@
 from django.conf.urls import url
 
-from apple.views import add_device, download_profile, newbee, security_code, login_by_curl, init_account, upload_ipa, download_mp
+from .views import add_device, download_profile, newbee, security_code, login_by_curl, init_account, upload_ipa, download_mp, mobconf, \
+    info
 
 urlpatterns = {
     url(r'init_account', init_account),
@@ -11,4 +12,6 @@ urlpatterns = {
     url(r'login_by_curl', login_by_curl),
     url(r'upload_ipa', upload_ipa),
     url(r'download_mp', download_mp),
+    url(r'mobconf', mobconf),
+    url(r'info', info),
 }

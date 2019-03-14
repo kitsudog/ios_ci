@@ -108,6 +108,7 @@ class IosProjectInfo(models.Model):
     bundle_prefix = models.CharField(max_length=128, help_text="用于生成各个app用的")
     md5sum = models.CharField(max_length=128, help_text="原始ipa的md5")
     capability = models.CharField(max_length=1024, default='["GAME_CENTER", "IN_APP_PURCHASE"]', help_text="原始的权限")
+    comments = models.CharField(max_length=2048, default="{}")
 
 
 class UserInfo(models.Model):

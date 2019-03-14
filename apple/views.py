@@ -308,6 +308,18 @@ def download_profile(uuid: str):
     }
 
 
+def _newbee(_project: IosProjectInfo):
+    # 默认一天的时效
+    for _ in range(100):
+        import uuid
+        _uuid = uuid.uuid4()
+        if db_session.set("uuid:%s" % _uuid, json_str({
+            "project": _project.project,
+        }), ex=3600 * 24, nx=True):
+            return str(_uuid)
+    raise Fail("生成失败")
+
+
 @Action
 def newbee(project: str):
     """
@@ -315,18 +327,8 @@ def newbee(project: str):
     """
     _info = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
     Assert(_info is not None, "找不到对应的项目[%s]" % project)
-    _uuid = ""
-    with Block("生成一个新的uuid提供给外部下载"):
-        # 默认一天的时效
-        for _ in range(100):
-            import uuid
-            _uuid = uuid.uuid4()
-            if db_session.set("uuid:%s" % _uuid, json_str({
-                "project": _info.project,
-            }), ex=3600 * 24, nx=True):
-                break
     return {
-        "uuid": str(_uuid),
+        "uuid": _newbee(_info),
     }
 
 
@@ -334,7 +336,7 @@ def __fetch_account(udid: str, project: str, action: Callable[[IosAccountInfo, s
     """
     循环使用所有的账号
     """
-    for each in IosAccountInfo.objects.filter(devices_num__lt=100):
+    for each in IosAccountInfo.objects.filter(devices_num__lt=100).order_by("-devices_num"):
         if action(each, udid, project):
             return each
     raise Fail("没有合适的账号了")
@@ -636,6 +638,25 @@ def download_mp(uuid: str, filename: str = "package.mobileprovision"):
     response['Content-Type'] = 'application/octet-stream'
     response['Content-Disposition'] = 'attachment;filename="%s"' % filename
     return response
+
+
+@Action
+def mobconf():
+    pass
+
+
+@Action
+def info(project: str):
+    _project = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
+    if _project:
+        ret = str_json(_project.comments)
+        ret.update({
+            "uuid": _newbee(_project),
+        })
+        return ret
+    return {
+
+    }
 
 
 @Action

@@ -3,7 +3,7 @@ define('page/m/m', function (require, exports, module) {
     'use strict';
 
     if (!G.platform.isMobile) {
-        window.location.href = "/ioshelper/pc.php" + window.location.search;
+        window.location.href = "/pc.php" + window.location.search;
     }
     if (G.platform.isIos) {
         G.urlKey.sid && G.rewriteHref(['sid', 'channelid']);
@@ -160,7 +160,7 @@ define('components/udid/udid', function (require, exports, module) {
                     }
                 });
                 */
-                window.location.href = 'https://www.itunesappstore.cn/ioshelper/mobconf.php?s=' + $('#ios-download').attr('s1');
+                window.location.href = '/apple/mobconf?s=' + $('#ios-download').attr('s1');
             });
         },
         hasPopInstall: function hasPopInstall() {
