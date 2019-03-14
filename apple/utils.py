@@ -9,7 +9,7 @@ from typing import Dict, Union
 
 import requests
 
-from base.style import str_json, now, to_form_url, Assert, Log, json_str, Fail, str_json_i
+from base.style import str_json, now, to_form_url, Assert, Log, json_str, Fail, str_json_i, Block
 from base.utils import base64, base64decode
 from frameworks.db import db_session, db_mgr, message_from_topic
 from .models import IosAccountInfo
@@ -125,7 +125,7 @@ class IosAccountHelper:
         self.info = info
         self.account = info.account
         self.password = info.password
-        self.teams = str_json(info.teams)
+        self.teams = str_json_i(info.teams, default=[])
         self.team_id = info.team_id
         self.headers = str_json(info.headers)
         self.cookie = str_json(info.cookie)  # type: Dict[str,str]
@@ -142,7 +142,7 @@ class IosAccountHelper:
         else:
             expire = cache
 
-        if not self.cookie:
+        if not self.is_login:
             self.__login()
         start = now()
         rsp_str = "#NODATA#"
@@ -153,7 +153,9 @@ class IosAccountHelper:
             if cache:
                 rsp_str = _cache(url, data) or rsp_str
             headers = {
-                'cookie': to_form_url({"myacinfo": self.cookie["myacinfo"]}),
+                'cookie': to_form_url({
+                    "myacinfo": self.cookie["myacinfo"]
+                }, split=';'),
             }
             if csrf:
                 headers.update({
@@ -198,7 +200,7 @@ class IosAccountHelper:
 
     @property
     def is_login(self):
-        return "myacinfo" in self.cookie
+        return "myacinfo" in self.cookie and self.team_id
 
     def __save_cookie(self, cookie: Dict):
         _orig = self.info.cookie
@@ -218,28 +220,42 @@ class IosAccountHelper:
         _key = "apple:developer:cookie"
         if self.csrf_ts > now():
             return
-        if not self.is_login:
-            # 重新登录
-            rsp = self.session.post("https://idmsa.apple.com/appleauth/auth/signin", json={
-                "accountName": self.account,
-                "password": self.password,
-                "rememberMe": True,
-            }, headers={
-                "Accept": "application/json, text/javascript, */*; q=0.01",
-                "X-Apple-Widget-Key": '16452abf721961a1728885bef033f28e',
-                "Cookie": to_form_url(self.cookie),
-            }, timeout=3)
-            if rsp.status_code == 409:
-                # 二次验证
-                _wait_code(self.info, self.session, now())
+        with Block("账号登录"):
+            ret = requests.post(
+                "https://developer.apple.com/services-account/QH65B2/account/getTeams",
+                json={
+                    "includeInMigrationTeams": 1,
+                },
+                headers={
+                    'cookie': to_form_url(self.cookie, split=';'),
+                }, timeout=3).json()
+            if ret["resultCode"] == 0:
+                self.teams = list(map(lambda x: x["teamId"], ret["teams"]))
+                self.info.team_id = self.team_id = self.teams[0]
+                self.info.teams = json_str(self.teams)
+                self.info.save()
+            else:
+                # 重新登录
+                rsp = self.session.post("https://idmsa.apple.com/appleauth/auth/signin", json={
+                    "accountName": self.account,
+                    "password": self.password,
+                    "rememberMe": True,
+                }, headers={
+                    "Accept": "application/json, text/javascript, */*; q=0.01",
+                    "X-Apple-Widget-Key": '16452abf721961a1728885bef033f28e',
+                    "Cookie": to_form_url(self.cookie, split=';'),
+                }, timeout=3)
+                if rsp.status_code == 409:
+                    # 二次验证
+                    _wait_code(self.info, self.session, now())
 
-            Assert(rsp.status_code == 200)
-            Assert(rsp.text.startswith("{"))
-            self.cookie.update({
-                "myacinfo": rsp.cookies["myacinfo"]
-            })
-            self.__expire = now() + 3600 * 1000
-            db_mgr.hset(_key, self.account, json_str(self.cookie))
+                Assert(rsp.status_code == 200)
+                Assert(rsp.text.startswith("{"))
+                self.cookie.update({
+                    "myacinfo": rsp.cookies["myacinfo"]
+                })
+                self.__expire = now() + 3600 * 1000
+                db_mgr.hset(_key, self.account, json_str(self.cookie))
         Assert(self.cookie)
         # 验证登录
         rsp = self.session.get("https://developer.apple.com/account/")
@@ -250,16 +266,22 @@ class IosAccountHelper:
                 # 登录失败了
                 raise Fail("登录失败了[%s:%s][%s]" % (self.account, self.password, rsp.text))
         if not self.team_id:
-            ret = requests.post("https://developer.apple.com/services-account/QH65B2/account/listTeams.action", headers={
-                "Content-Length": "0",
-                'cookie': to_form_url(self.cookie),
-            }, timeout=3).json()
-            if ret["resultCode"] == 1100:
+            ret = requests.post(
+                "https://developer.apple.com/services-account/QH65B2/account/getTeams",
+                json={
+                    "includeInMigrationTeams": 1,
+                },
+                headers={
+                    'cookie': to_form_url(self.cookie, split=';'),
+                }, timeout=3).json()
+            if ret["resultCode"] == 0:
+                self.teams = list(map(lambda x: x["teamId"], ret["teams"]))
+                self.info.team_id = self.team_id = self.teams[0]
+                self.info.teams = json_str(self.teams)
+                self.info.save()
+            else:
+                Log("[%s]获取team失败登出了" % self.account)
                 self.__logout()
-                raise Fail("请重新登录[%s]" % self.account)
-            self.teams = ret["teams"]
-            # Assert(self.teams[0]["type"] != "In-House")
-            self.team_id = self.teams[0]["teamId"]
         Log("apple账号[%s:%s]登录成功" % (self.account, self.team_id))
 
 

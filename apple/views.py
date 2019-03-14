@@ -62,16 +62,7 @@ def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str,
 
 
 def _reg_device(device_id: str, udid: str, model: str, sn: str) -> str:
-    orig = str_json(db_model.get("IosDeviceInfo:%s" % udid) or '{}')
-    obj = {
-        "udid": udid,
-        "model": model,
-        "sn": sn,
-        "device_id": device_id,
-    }
-    if orig == obj:
-        return udid
-    db_model.set("IosDeviceInfo:%s" % udid, json_str(obj))
+    # 需要缓存
     _info = IosDeviceInfo()
     _info.udid = udid
     _info.device_id = device_id
@@ -555,7 +546,7 @@ def security_code(account: str, code: str):
 @Action
 def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
     """
-    https://developer.apple.com/account/#/overview/QLDV8FPKZC
+    https://developer.apple.com/account/
     getUserProfile 请求
 
     curl 'https://developer.apple.com/services-account/QH65B2/account/getUserProfile' -H 'origin: https://developer.apple.com' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: zh-CN,zh;q=0.9' -H 'csrf: cf0796aee015fe0f03e7ccc656ba4b898b696cc1072027988d89b1f6e607fd67' -H 'cookie: geo=SG; ccl=SR+vWVA/vYTrzR1LkZE2tw==; s_fid=56EE3E795513A2B4-16F81B5466B36881; s_cc=true; s_vi=[CS]v1|2E425B0B852E2C90-40002C5160000006[CE]; dslang=CN-ZH; site=CHN; s_pathLength=developer%3D2%2C; acn01=v+zxzKnMyleYWzjWuNuW1Y9+kAJBxfozY2UAH0paNQB+FA==; myacinfo=DAWTKNV2a5c238e8d27e8ed221c8978cfb02ea94b22777f25ffec5abb1a855da8debe4f59d60b506eae457dec4670d5ca9663ed72c3d1976a9f87c53653fae7c63699abe64991180d7c107c50ce88be233047fc96de200c3f23947bfbf2e064c7b9a7652002d285127345fe15adf53bab3d347704cbc0a8b856338680722e5d0387a5eb763d258cf19b79318be28c4abd01e27029d2ef26a1bd0dff61d141380a1b496b92825575735d0be3dd02a934db2d788c9d6532b6a36bc69d244cc9b4873cef8f4a3a90695f172f6f521330f67f20791fd7d62dfc9d6de43899ec26a8485191d62e2c5139f81fca2388d57374ff31f9f689ad373508bcd74975ddd3d3b7875fe3235323962636433633833653433363562313034383164333833643736393763303538353038396439MVRYV2; DSESSIONID=1c3smahkpfbkp7k3fju30279uoba8p8480gs5ajjgsbbvn8lubqt; s_sq=%5B%5BB%5D%5D' -H 'user-locale: en_US' -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.81 Safari/537.36 QQBrowser/4.5.122.400' -H 'content-type: application/json' -H 'accept: application/json' -H 'cache-control: max-age=0, no-cache, no-store, must-revalidate, proxy-revalidate' -H 'authority: developer.apple.com' -H 'referer: https://developer.apple.com/account/' -H 'csrf_ts: 1552204197631' --data-binary '{}' --compressed
@@ -591,6 +582,10 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
 
     if account:
         _info = IosAccountInfo.objects.filter(account=account).first()  # type:IosAccountInfo
+        if not _info:
+            _info = IosAccountInfo()
+            _info.account = account
+            _info.save()
         _info.cookie = json_str(parsed_context.cookies)
         _info.headers = json_str(parsed_context.headers)
         _info.save()

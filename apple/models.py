@@ -19,9 +19,9 @@ class IosAccountInfo(models.Model):
     cookie = models.TextField()
     headers = models.CharField(max_length=1024)
     csrf = models.CharField(max_length=128)
-    csrf_ts = models.BigIntegerField()
+    csrf_ts = models.BigIntegerField(default=0)
     devices = models.TextField()
-    devices_num = models.IntegerField()
+    devices_num = models.IntegerField(default=0)
 
 
 class IosDeviceInfo(models.Model):
