@@ -89,7 +89,7 @@ class IosAccountHelper:
         # self.session.cookies.update(self.cookie)
 
     def post(self, title: str, url: str, data: Dict = None, is_json=True, log=True, cache: Union[bool, int] = False, csrf=False,
-             json_api=True):
+             json_api=True, method="POST", is_binary=False):
         if cache is True:
             expire = 3600 * 1000
         else:
@@ -114,21 +114,30 @@ class IosAccountHelper:
                         'csrf': self.csrf,
                         'csrf_ts': self.csrf_ts,
                     })
-                rsp = requests.post(url, data=data, headers=headers)
+                if method.upper() == "GET":
+                    rsp = requests.get(url, params=data, headers=headers)
+                else:
+                    rsp = requests.post(url, data=data, headers=headers)
+
                 rsp_str = rsp.text
-                Assert(rsp.status_code == 200, "请求异常")
+                Assert(rsp.status_code == 200, "请求[%s]异常[%s]" % (title, rsp.status_code))
                 if rsp.headers.get("csrf"):
                     self.csrf = rsp.headers["csrf"]
                     self.csrf_ts = rsp.headers["csrf_ts"]
                 if json_api:
                     _data = str_json_i(rsp_str) or {}
-                    Assert(_data.get("resultCode") == 0, "请求业务失败")
+                    if _data.get("resultCode") == 1100:
+                        self.__logout()
+                        raise Fail("登录[%s]过期了[%s][%s]" % (self.account, _data.get("resultString"), _data.get("userString")))
+                    Assert(_data.get("resultCode") == 0, "请求业务[%s]失败[%s][%s]" % (title, _data.get("resultString"), _data.get("userString")))
                 if log:
                     Log("apple请求[%s][%s]发送[%r]成功[%r]" % (title, now() - start, data, rsp_str))
                 if cache:
                     _set_cache(url, data, rsp_str, expire=expire)
             if is_json:
                 return str_json(rsp_str)
+            elif is_binary:
+                return rsp.content
             else:
                 return rsp_str
         except Exception as e:

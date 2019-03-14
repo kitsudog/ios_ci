@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from apple.views import add_device, download_profile, newbee, security_code, login_by_curl, init_account, upload_ipa
+from apple.views import add_device, download_profile, newbee, security_code, login_by_curl, init_account, upload_ipa, download_mp
 
 urlpatterns = {
     url(r'init_account', init_account),
@@ -10,4 +10,5 @@ urlpatterns = {
     url(r'security_code', security_code),
     url(r'login_by_curl', login_by_curl),
     url(r'upload_ipa', upload_ipa),
+    url(r'download_mp', download_mp),
 }

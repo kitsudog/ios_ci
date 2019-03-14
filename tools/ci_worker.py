@@ -25,6 +25,67 @@ __DEBUG = os.environ.get("DEBUG", "FALSE").upper() == "TRUE"
 logger = logging.getLogger("default")
 
 
+class Block:
+    """
+    只是一个语句块的标记而已
+    """
+
+    def __init__(self, title, expr=True, log=False, log_both=False, log_cost=False, pass_log=False,
+                 fail=True, params=None):
+        """
+        :param title: 语句块的描述
+        :param expr: 额外的表达式
+        :param log: 结束时打log
+        :param log_both: 开始结束时都打log
+        :param log_cost: 记录耗时
+        :param pass_log: 表达式为False时打log
+        :param fail:
+        :param params: 方便输出log的时候附加一些相关参数
+        """
+        assert isinstance(title, str), "Block的第一个参数是文案"
+        self.title = title
+        self.log = log or log_both
+        self.fail = fail
+        self.expr = expr
+        self.log_both = log_both
+        self.log_cost = log_cost
+        self.start = now() if log_cost else 0
+        self.params = params
+        self.__pass = False  # 是否跳过当前块
+
+    def __enter__(self):
+        if self.expr is None or self.expr is False:
+            self.__pass = True
+        if self.log_both:
+            if self.__pass:
+                Log("Block[%s] False 开始" % self.title)
+            else:
+                if self.log:
+                    Log("Block[%s] 开始" % self.title)
+        return self.expr
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.__pass:
+            if self.log_cost:
+                Log("Block[%s] False 结束 [cost:%s]" % (self.title, (now() - self.start) / 1000))
+            else:
+                Log("Block[%s] False 结束" % self.title)
+        else:
+            if self.log:
+                if self.log_cost:
+                    Log("Block[%s] 结束 [cost:%s]" % (self.title, (now() - self.start) / 1000))
+                else:
+                    Log("Block[%s] 结束" % self.title)
+        if exc_type:
+            # 出现异常了
+            if self.fail:
+                return True
+            else:
+                Trace("Block[%s] 出错了" % self.title, exc_type)
+
+        return not self.fail
+
+
 def makedirs(name, mode=0o777, exist_ok=False):
     head, tail = os.path.split(name)
     if not tail:
@@ -220,15 +281,16 @@ def _redis(host, port, index=13):
     return db
 
 
-def byteify(input, encoding='utf-8'):
-    if isinstance(input, dict):
-        return {byteify(key): byteify(value) for key, value in input.iteritems()}
-    elif isinstance(input, list):
-        return [byteify(element) for element in input]
-    elif isinstance(input, eval('unicode')):
-        return input.encode(encoding)
+# noinspection PyUnresolvedReferences,SpellCheckingInspection
+def byteify(src, encoding='utf-8'):
+    if isinstance(src, dict):
+        return {byteify(key): byteify(value) for key, value in src.iteritems()}
+    elif isinstance(src, list):
+        return [byteify(element) for element in src]
+    elif isinstance(src, eval('unicode')):
+        return src.encode(encoding)
     else:
-        return input
+        return src
 
 
 def _from_topic(topic, is_json=False, limit=10):
@@ -322,32 +384,43 @@ def Trace(msg, e, raise_e=False):
             raise e
 
 
-def _task(cert, cert_p12, mobileprovision, project, ipa_url, ipa_md5, ipa_new, upload_url):
+def _task(cert, cert_p12, mp_url, mp_md5, project, ipa_url, ipa_md5, ipa_new, upload_url):
     base = tempfile.gettempdir()
     # 确认ipa
     if cert not in _certs:
         Log("导入p12")
         _write_file(os.path.join(base, "cert.p12"), base64.decodebytes(cert_p12))
-    Log("写入mobileprovision")
-    file_mp = os.path.join(base, "package.mobileprovision")
-    _write_file(file_mp, base64.b64decode(mobileprovision))
-    makedirs(os.path.join("package", project), exist_ok=True)
-    file_ipa = os.path.join("package", project, "orig.ipa")
-    if os.path.isfile(file_ipa) and md5(_read_file(file_ipa)) == ipa_md5:
-        Log("采用本地的ipa文件")
-    else:
-        Log("下载ipa文件")
-        assert call(["wget", ipa_url, "-O", file_ipa, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % ipa_url
-    Log("开始打包[%s]" % project)
-    file_new = os.path.join("package", project, ipa_new)
-    _package(file_ipa, file_mp, cert, file_new)
-    Log("上传ipa[%s]" % project)
-    import requests
-    rsp = requests.post(upload_url, files={
-        "file": _read_file(file_new),
-    })
-    assert rsp.status_code == 200
-    assert rsp.json()["ret"] == 0
+
+    with Block("mobileprovision部分"):
+        file_mp = os.path.join(base, "package.mobileprovision")
+        if os.path.isfile(file_mp) and md5(_read_file(file_mp)) == mp_md5:
+            Log("采用本地的mobileprovision文件")
+        else:
+            Log("下载mobileprovision文件")
+            makedirs(os.path.join("package", project), exist_ok=True)
+            assert call(["wget", mp_url, "-O", file_mp, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % mp_url
+
+    with Block("ipa部分"):
+        file_ipa = os.path.join("package", project, "orig.ipa")
+        if os.path.isfile(file_ipa) and md5(_read_file(file_ipa)) == ipa_md5:
+            Log("采用本地的ipa文件")
+        else:
+            Log("下载ipa文件")
+            makedirs(os.path.join("package", project), exist_ok=True)
+            assert call(["wget", ipa_url, "-O", file_ipa, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % ipa_url
+    with Block("打包"):
+        Log("开始打包[%s]" % project)
+        file_new = os.path.join("package", project, ipa_new)
+        _package(file_ipa, file_mp, cert, file_new)
+
+    with Block("上传"):
+        Log("上传ipa[%s]" % project)
+        import requests
+        rsp = requests.post(upload_url, files={
+            "file": _read_file(file_new),
+        })
+        assert rsp.status_code == 200
+        assert rsp.json()["ret"] == 0
     Log("任务完成")
 
 
@@ -392,7 +465,8 @@ def run(host, port):
                 _task(
                     each["cert"],
                     each["cert_p12"],
-                    each["mobileprovision"],
+                    each["mp_url"],
+                    each["mp_md5"],
                     each["project"],
                     each["ipa_url"],
                     each["ipa_md5"],

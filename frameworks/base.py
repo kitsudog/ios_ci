@@ -170,8 +170,13 @@ class Action(DjangoAction):
             if len(req.COOKIES):
                 for k, v in req.COOKIES.items():
                     orig_params["$c_%s" % k] = v
-            if "json" in req.META.get("CONTENT_TYPE", "") and len(req.body):
-                orig_params.update(json.loads(req.body.decode('utf8')))
+            content_type = req.META.get("CONTENT_TYPE", "")
+            if len(req.body):
+                if "json" in content_type:
+                    orig_params.update(json.loads(req.body.decode('utf8')))
+                elif "text" in content_type:
+                    orig_params.update(json.loads(req.body.decode('utf8')))
+
             req._orig_params = orig_params
         else:
             orig_params = dict(self.default_params)
