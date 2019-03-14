@@ -7,27 +7,17 @@ from typing import Dict, List, Callable, Optional
 import requests
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest
 
-from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace
+from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran
 from base.utils import base64decode, md5bytes, base64
 from frameworks.base import Action
 from frameworks.db import db_model, db_session
+from helper.name_generator import GetRandomName
 from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo
-from .utils import IosAccountHelper, publish_security_code, curl_parse_context
+from .utils import IosAccountHelper, publish_security_code, curl_parse_context, entry, get_capability
 
 
-def _reg_app(_config: IosAccountInfo, app_id_id: str, name: str, prefix: str, identifier: str) -> str:
-    sid = "%s:%s" % (_config.account, identifier)
-    orig = str_json(db_model.hget("IosAppInfo:%s" % _config.account, identifier) or '{}')
-    obj = {
-        "identifier": identifier,
-        "name": name,
-        "prefix": prefix,
-        "app_id_id": app_id_id,
-        "app": _config.account,
-    }
-    if orig == obj:
-        return app_id_id
-    db_model.hset("IosAppInfo:%s" % _config.account, identifier, json_str(obj))
+def _reg_app(_config: IosAccountInfo, project: str, app_id_id: str, name: str, prefix: str, identifier: str):
+    sid = "%s:%s" % (_config.account, project)
     _info = IosAppInfo()
     _info.sid = sid
     _info.app = _config.account
@@ -38,7 +28,6 @@ def _reg_app(_config: IosAccountInfo, app_id_id: str, name: str, prefix: str, id
     _info.create = now()
     _info.save()
     Log("注册新的app[%s][%s][%s]" % (_config.account, app_id_id, identifier))
-    return app_id_id
 
 
 def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str, expire):
@@ -100,14 +89,62 @@ def _get_cert(info: IosAccountInfo) -> IosCertInfo:
         expire__gt=datetime.datetime.utcfromtimestamp(now() // 1000),
         type_str="development",
     ).first()  # type: IosCertInfo
+    if not cert:
+        # todo: 生成证书
+        pass
     return Assert(cert, "缺少现成的开发[iOS App Development]证书[%s]" % info.account)
 
 
-def _get_app(info: IosAccountInfo) -> IosAppInfo:
+def _get_app(_config: IosAccountHelper, project: str) -> IosAppInfo:
     app = IosAppInfo.objects.filter(
-        sid="%s:*" % info.account,
+        sid="%s:%s" % (_config.account, project),
     ).first()  # type: IosAppInfo
-    return Assert(app, "缺少app")
+    if not app:
+        _project = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
+        _identifier = "%s.%s" % (_project.bundle_prefix, GetRandomName())
+        _config.post(
+            "验证一个app",
+            "https://developer.apple.com/services-account/QH65B2/account/ios/identifiers/validateAppId.action?teamId=",
+            data={
+                "teamId": _config.team_id,
+                "appIdName": "ci%s" % project,
+                "appIdentifierString": _identifier,
+                "type": "explicit",
+                "explicitIdentifier": _identifier,
+            },
+        )
+        _config.post(
+            "注册一个app",
+            "https://developer.apple.com/services-account/v1/bundleIds",
+            data=json_str({
+                "data": {
+                    "type": "bundleIds",
+                    "attributes": {
+                        "name": "ci%s" % project,
+                        "identifier": _identifier,
+                        "platform": "IOS",
+                        "seedId": _config.team_id,
+                        "teamId": _config.team_id,
+                    },
+                    "relationships": {
+                        "bundleIdCapabilities": {
+                            "data": tran(get_capability, str_json(_project.capability)),
+                        },
+                    },
+                },
+            }),
+            ex_headers={
+                "content-type": "application/vnd.api+json",
+            },
+            csrf=True,
+            json_api=False,
+            status=201,
+        )
+        __list_all_app(_config, project)
+        app = IosAppInfo.objects.filter(
+            sid="%s:%s" % (_config.account, project),
+        ).first()  # type: IosAppInfo
+    return Assert(app, "账号[%s]缺少app[%s]" % (_config.account, project))
 
 
 def _get_device_id(udid_list: List[str]) -> Dict[str, str]:
@@ -120,7 +157,7 @@ def _get_device_id(udid_list: List[str]) -> Dict[str, str]:
     )
 
 
-def __list_all_app(_config: IosAccountHelper):
+def __list_all_app(_config: IosAccountHelper, project: str):
     ret = _config.post(
         "所有的app",
         "https://developer.apple.com/services-account/QH65B2/account/ios/identifiers/listAppIds.action?teamId=",
@@ -131,7 +168,9 @@ def __list_all_app(_config: IosAccountHelper):
             "onlyCountLists": True,
         })
     for app in ret["appIds"]:  # type: Dict
-        _reg_app(_config.info, app["appIdId"], app["name"], app["prefix"], app["identifier"])
+        if app["name"] != "ci%s" % project:
+            continue
+        _reg_app(_config.info, project, app["appIdId"], app["name"], app["prefix"], app["identifier"])
 
 
 def _to_ts(date_str: str):
@@ -215,6 +254,7 @@ def __list_all_profile(_config: IosAccountHelper, target_project: str = ""):
             detail = True
 
         if _info.expire != expire:
+            _info.profile_id = profile["provisioningProfileId"]
             _info.expire = expire
             detail = True
 
@@ -255,7 +295,7 @@ def __list_all_cert(_config: IosAccountHelper):
 def init_account(account: str):
     _config = IosAccountHelper(IosAccountInfo.objects.filter(account=account).first())
     __list_all_devices(_config)
-    __list_all_app(_config)
+    __list_all_app(_config, "")
     __list_all_cert(_config)
     __list_all_profile(_config)
     return {
@@ -372,19 +412,23 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
             ret, _info = __list_all_profile(_config, project)
             if not _info:
                 _info = IosProfileInfo()
-                _info.sid = "%s" % _config.account
+                _info.sid = "%s:%s" % (_config.account, project)
                 _info.app = _config.account
-                _info.devices = ""
+                _info.devices = "[]"
                 _info.devices_num = 0
-            devices = _info.devices.split(",") if _info.devices else []
-            device_id = _get_device_id([udid])[udid]
-            if device_id in devices:
+                _info.project = project
+
+            devices = str_json(_info.devices)  # type: List[str]
+
+            if udid in devices:
                 pass
             else:
-                devices.append(device_id)
-                _info.devices = ",".join(devices)
-                _app = _get_app(_config.info)
+                devices.append(udid)
+                with Block("默认全开当期的设备"):
+                    # noinspection PyTypeChecker
+                    devices = list(set(devices + str_json(_config.info.devices)))
                 _cert = _get_cert(_config.info)
+                _app = _get_app(_config, project)
                 found = False
                 for each in ret["provisioningProfiles"]:  # type: Dict
                     if each["name"] != "专用 %s" % project:
@@ -401,16 +445,17 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                             "provisioningProfileName": each["name"],
                             "appIdId": _app.app_id_id,
                             "certificateIds": _cert.cert_req_id,
-                            "deviceIds": ",".join(devices),
+                            "deviceIds": ",".join(_get_device_id(devices).values()),
                         }, csrf=True)
                     Assert(ret["resultCode"] == 0)
+                    _info.devices = json_str(devices)
                     _info.profile_id = each["provisioningProfileId"]
                     # noinspection PyTypeChecker
                     _info.profile = ret["provisioningProfile"]["encodedProfile"]
                     _info.expire = _to_dt(ret["provisioningProfile"]["dateExpire"])
                     _info.save()
                     found = True
-                    Log("更新证书[%s]添加设备[%s]成功" % (project, udid))
+                    Log("更新证书[%s]添加设备[%s][%s]成功" % (project, udid, len(devices)))
                     break
                 if not found:
                     ret = _config.post(
@@ -419,7 +464,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                         data={
                             "subPlatform": "",
                             "certificateIds": _cert.cert_req_id,
-                            "deviceIds": ",".join(devices),
+                            "deviceIds": ",".join(_get_device_id(devices).values()),
                             "template": "",
                             "returnFullObjects": False,
                             "distributionTypeLabel": "distributionTypeLabel",
@@ -437,7 +482,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                     _info.profile = ret["provisioningProfile"]["encodedProfile"]
                     _info.expire = _to_dt(ret["provisioningProfile"]["dateExpire"])
                     _info.save()
-                    Log("添加证书[%s]添加设备[%s]成功" % (project, udid))
+                    Log("添加证书[%s]添加设备[%s][%s]成功" % (project, udid, len(devices)))
     except Exception as e:
         Trace("添加设备出错了[%s]" % e, e)
         return False
@@ -447,18 +492,19 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
 def __add_task(_user: UserInfo):
     _account = IosAccountInfo.objects.filter(account=_user.account).first()  # type:IosAccountInfo
     _project = IosProjectInfo.objects.filter(project=_user.project).first()  # type:IosProjectInfo
-    _profile = IosProfileInfo.objects.filter(sid="%s:%s" % (_account, _user.project)).first()  # type:IosProfileInfo
+    _profile = IosProfileInfo.objects.filter(sid="%s:%s" % (_user.account, _user.project)).first()  # type:IosProfileInfo
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
+    Log("[%s]发布任务[%s]" % (_user.project, _user.account))
     db_session.publish("task:package", json_str({
         "cert": "iPhone Developer: zhangming luo",
         "cert_p12": "",
-        "mp_url": _asset_url("%s/orig.ipa" % _user.project),
+        "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
         "mp_md5": md5bytes(base64decode(_profile.profile)),
         "project": _project.project,
         "ipa_url": _asset_url("%s/orig.ipa" % _user.project),
         "ipa_md5": _project.md5sum,
         "ipa_new": "%s_%s.ipa" % (_account.team_id, _account.devices_num),
-        "upload_url": "http://127.0.0.1:8000/apple/upload_ipa?project=%s&account=%s" % (_user.project, _user.account),
+        "upload_url": entry("/apple/upload_ipa?project=%s&account=%s" % (_user.project, _user.account)),
         "ts": now(),
     }))
 
@@ -492,7 +538,6 @@ def add_device(uuid: str, udid: str):
     _user.account = _account.account
     _user.save()
     # db_session.delete(_key)
-    Log("设备[%s]添加到账号[%s]" % (udid, _account.account))
     __add_task(_user)
     return {
         "succ": True,
@@ -565,15 +610,18 @@ def upload_ipa(project: str, account: str, file: bytes):
     base = os.path.join("static/income", project)
     os.makedirs(base, exist_ok=True)
     _info = IosAccountInfo.objects.filter(account=account).first()  # type:IosAccountInfo
-    with open(os.path.join(base, "%s_%s.ipa" % (_info.team_id, _info.devices_num)), mode="wb") as fout:
+    Assert(_info, "账号[%s]不存在" % account)
+    filename = "%s_%s.ipa" % (_info.team_id, _info.devices_num)
+    with open(os.path.join(base, filename), mode="wb") as fout:
         fout.write(file)
+    Log("[%s]收到新打包的ipa[%s]" % (account, filename))
     return {
         "succ": True,
     }
 
 
 def _asset_url(path):
-    return "http://127.0.0.1:8000/income/%s" % path
+    return entry("/income/" + path)
 
 
 # noinspection PyShadowingNames
@@ -588,8 +636,8 @@ def download_ipa(uuid: str):
 def download_mp(uuid: str, filename: str = "package.mobileprovision"):
     _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
     _info = IosAccountInfo.objects.filter(account=_user.account).first()  # type:IosAccountInfo
-    _profile = IosProfileInfo.objects.filter(sid="%s:%s" % (_user.account, _user.app)).first()  # type:IosProfileInfo
-    response = HttpResponse(_profile.profile)
+    _profile = IosProfileInfo.objects.filter(sid="%s:%s" % (_user.account, _user.project)).first()  # type:IosProfileInfo
+    response = HttpResponse(base64decode(_profile.profile))
     response['Content-Type'] = 'application/octet-stream'
     response['Content-Disposition'] = 'attachment;filename="%s"' % filename
     return response

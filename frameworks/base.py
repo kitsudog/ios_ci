@@ -171,7 +171,9 @@ class Action(DjangoAction):
                 for k, v in req.COOKIES.items():
                     orig_params["$c_%s" % k] = v
             content_type = req.META.get("CONTENT_TYPE", "")
-            if len(req.body):
+            if content_type.startswith('multipart'):
+                pass
+            elif len(req.body):
                 if "json" in content_type:
                     orig_params.update(json.loads(req.body.decode('utf8')))
                 elif "text" in content_type:

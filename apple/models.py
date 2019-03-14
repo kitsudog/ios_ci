@@ -86,13 +86,13 @@ class IosProfileInfo(models.Model):
         db_table = "ios_profile_info"
 
     sid = models.CharField(max_length=128, primary_key=True, db_column="sid", blank=False)
-    app = models.CharField(max_length=128, db_index=True)
-    profile_id = models.CharField(max_length=128, db_index=True)
+    app = models.CharField(max_length=128)
+    profile_id = models.CharField(max_length=128)
     devices = models.TextField()
     devices_num = models.IntegerField()
-    expire = models.DateTimeField()
-    last = models.DateTimeField(auto_now=True)
+    expire = models.DateTimeField(db_index=True)
     profile = models.TextField()
+    project = models.CharField(max_length=128, db_index=True)
 
 
 class IosProjectInfo(models.Model):
@@ -107,6 +107,7 @@ class IosProjectInfo(models.Model):
     project = models.CharField(max_length=128, db_index=True, help_text="工程名字")
     bundle_prefix = models.CharField(max_length=128, help_text="用于生成各个app用的")
     md5sum = models.CharField(max_length=128, help_text="原始ipa的md5")
+    capability = models.CharField(max_length=1024, default='["GAME_CENTER", "IN_APP_PURCHASE"]', help_text="原始的权限")
 
 
 class UserInfo(models.Model):

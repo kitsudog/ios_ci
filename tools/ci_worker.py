@@ -79,7 +79,7 @@ class Block:
         if exc_type:
             # 出现异常了
             if self.fail:
-                return True
+                raise exc_type
             else:
                 Trace("Block[%s] 出错了" % self.title, exc_type)
 
@@ -399,7 +399,7 @@ def _task(cert, cert_p12, mp_url, mp_md5, project, ipa_url, ipa_md5, ipa_new, up
             Log("下载mobileprovision文件")
             makedirs(os.path.join("package", project), exist_ok=True)
             assert call(["wget", mp_url, "-O", file_mp, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % mp_url
-
+            assert md5(_read_file(file_mp)) == mp_md5, "下载[%s]失败" % mp_url
     with Block("ipa部分"):
         file_ipa = os.path.join("package", project, "orig.ipa")
         if os.path.isfile(file_ipa) and md5(_read_file(file_ipa)) == ipa_md5:
@@ -408,13 +408,15 @@ def _task(cert, cert_p12, mp_url, mp_md5, project, ipa_url, ipa_md5, ipa_new, up
             Log("下载ipa文件")
             makedirs(os.path.join("package", project), exist_ok=True)
             assert call(["wget", ipa_url, "-O", file_ipa, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % ipa_url
+            assert md5(_read_file(file_ipa)) == ipa_md5, "下载[%s]失败了" % ipa_url
+
     with Block("打包"):
         Log("开始打包[%s]" % project)
         file_new = os.path.join("package", project, ipa_new)
         _package(file_ipa, file_mp, cert, file_new)
 
     with Block("上传"):
-        Log("上传ipa[%s]" % project)
+        Log("上传ipa[%s][%s]" % (project, upload_url))
         import requests
         rsp = requests.post(upload_url, files={
             "file": _read_file(file_new),
