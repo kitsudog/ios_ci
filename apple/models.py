@@ -22,6 +22,7 @@ class IosAccountInfo(models.Model):
     csrf_ts = models.BigIntegerField(default=0)
     devices = models.TextField()
     devices_num = models.IntegerField(default=0)
+    phone = models.CharField(max_length=128, help_text="二次验证用的")
 
 
 class IosDeviceInfo(models.Model):

@@ -1,13 +1,14 @@
 # Create your views here.
 import datetime
 import os
+import re
 import time
 from typing import Dict, List, Callable, Optional
 
 import requests
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest
 
-from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran
+from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url
 from base.utils import base64decode, md5bytes, base64
 from frameworks.base import Action
 from frameworks.db import db_model, db_session
@@ -538,19 +539,58 @@ def add_device(uuid: str, udid: str):
 
 
 @Action
-def security_code(account: str, code: str):
-    publish_security_code(account, code, now())
-    return {
-        "succ": True,
-    }
+def login_by_fastlane(_req: HttpRequest, cmd: str = "", account: str = ""):
+    """
+    通过命令获取会话
+    fastlane spaceauth -u kitsudo163@163.com
+    ex.
+    export FASTLANE_SESSION='---\n- !ruby/object:HTTP::Cookie\n  name: myacinfo\n  value: DAWTKNV2e32a0823580640561dc9dfd382265048c32c2aa5b04485930b2ada1d1c7eba28dee6c6065c749f708f2a429f8f9f2d0f2f7d2ad629652ca5bc3383c0772d51c6ca34a2f7b09141f7b19c358c2b25d0738079ab1e48a06610228a574342c84ef13349ede1a012c25155e265a17989a3b09631dd953954505153fb7ef71aecfe303530cb684c89e8402cb82d8d4d93c3fc3c1209e334f65f71c7ae0cfdf0349ec757abcb104a591f5bea25ac0f1207004c19645b80ed82fb5cd0d3a740224b2f3aef9e91b049bb63a94ae3c76d027411f077069865209d733617a7a84f54cf7e9488e9b4f0a918d29f184f5ec76d95b5f55def61682f70b7f10fc12dc43d6e380213dd1f702a4f3ccab3ad438cd0f6a87c295e028a12ec410aa3fa689210d040377995914d4d3718b90f85ad5452d5db47ef9ae11c6b3216cf8ab61025adc203b0bf072ce832240c384d83f0f4aaf477a3c7313de4c20c5e32c530ff1ad76aebcd8538ac485a9a46941dfa94ee2f3fb40e38666533326562333665333834343461323366383636666563303166613533303330656361323836MVRYV2\n  domain: apple.com\n  for_domain: true\n  path: "/"\n  secure: true\n  httponly: true\n  expires: \n  max_age: \n  created_at: 2019-03-15 11:55:51.031441000 +08:00\n  accessed_at: 2019-03-15 11:55:51.041509000 +08:00\n- !ruby/object:HTTP::Cookie\n  name: dqsid\n  value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJzZnp2ZGFldGJPeWpXaTc1LVpTRmNBIn0.IEYqXF-pxIYdIwP2rdNRNhoxdCzJgGxt4olTZa2fXo8\n  domain: olympus.itunes.apple.com\n  for_domain: false\n  path: "/"\n  secure: true\n  httponly: true\n  expires: \n  max_age: 1800\n  created_at: &1 2019-03-15 11:55:52.798977000 +08:00\n  accessed_at: *1\n
+    curl localhost:8000/apple/login_by_fastlane --data $FASTLANE_SESSION
+    """
+    if not cmd:
+        cmd = _req.body.decode("utf-8")
+    Assert(len(cmd), "命令行不对")
+    cmd = cmd.replace("\\n", "")
+    cookie = dict(re.compile(r"name:\s+(\S+)\s+value:\s+(\S+)").findall(cmd))
+    if not account:
+        rsp = requests.post("https://developer.apple.com/services-account/QH65B2/account/getUserProfile", headers={
+            "cookie": to_form_url(cookie, split=';')
+        })
+        if rsp.status_code != 200:
+            return {
+                "succ": False,
+                "reason": "无效的fastlane export",
+            }
+        data = rsp.json()
+        account = data["userProfile"]["email"]
+
+    if account:
+        _info = IosAccountInfo.objects.filter(account=account).first()  # type:IosAccountInfo
+        if not _info:
+            _info = IosAccountInfo()
+            _info.account = account
+            _info.save()
+        _info.cookie = json_str(cookie)
+        _info.headers = json_str({})
+        _info.save()
+        Log("通过fastlane登录[%s]" % account)
+        return {
+            "succ": True,
+            "msg": "登录[%s]成功" % account,
+        }
+    else:
+        return {
+            "succ": False,
+            "msg": "请求不具备提取登录信息",
+        }
 
 
 @Action
 def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
     """
-    https://developer.apple.com/account/
-    getUserProfile 请求
-
+    通过拦截网页的curl 请求
+    https://developer.apple.com/account/getUserProfile
+    ex.
     curl 'https://developer.apple.com/services-account/QH65B2/account/getUserProfile' -H 'origin: https://developer.apple.com' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: zh-CN,zh;q=0.9' -H 'csrf: cf0796aee015fe0f03e7ccc656ba4b898b696cc1072027988d89b1f6e607fd67' -H 'cookie: geo=SG; ccl=SR+vWVA/vYTrzR1LkZE2tw==; s_fid=56EE3E795513A2B4-16F81B5466B36881; s_cc=true; s_vi=[CS]v1|2E425B0B852E2C90-40002C5160000006[CE]; dslang=CN-ZH; site=CHN; s_pathLength=developer%3D2%2C; acn01=v+zxzKnMyleYWzjWuNuW1Y9+kAJBxfozY2UAH0paNQB+FA==; myacinfo=DAWTKNV2a5c238e8d27e8ed221c8978cfb02ea94b22777f25ffec5abb1a855da8debe4f59d60b506eae457dec4670d5ca9663ed72c3d1976a9f87c53653fae7c63699abe64991180d7c107c50ce88be233047fc96de200c3f23947bfbf2e064c7b9a7652002d285127345fe15adf53bab3d347704cbc0a8b856338680722e5d0387a5eb763d258cf19b79318be28c4abd01e27029d2ef26a1bd0dff61d141380a1b496b92825575735d0be3dd02a934db2d788c9d6532b6a36bc69d244cc9b4873cef8f4a3a90695f172f6f521330f67f20791fd7d62dfc9d6de43899ec26a8485191d62e2c5139f81fca2388d57374ff31f9f689ad373508bcd74975ddd3d3b7875fe3235323962636433633833653433363562313034383164333833643736393763303538353038396439MVRYV2; DSESSIONID=1c3smahkpfbkp7k3fju30279uoba8p8480gs5ajjgsbbvn8lubqt; s_sq=%5B%5BB%5D%5D' -H 'user-locale: en_US' -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.81 Safari/537.36 QQBrowser/4.5.122.400' -H 'content-type: application/json' -H 'accept: application/json' -H 'cache-control: max-age=0, no-cache, no-store, must-revalidate, proxy-revalidate' -H 'authority: developer.apple.com' -H 'referer: https://developer.apple.com/account/' -H 'csrf_ts: 1552204197631' --data-binary '{}' --compressed
     """
 
@@ -578,7 +618,13 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
             "succ": False,
             "reason": "无效的curl",
         }
-    if parsed_context.url == "https://developer.apple.com/services-account/QH65B2/account/getUserProfile":
+    if parsed_context.url != "https://developer.apple.com/services-account/QH65B2/account/getUserProfile":
+        data = rsp.json()
+        account = data["userProfile"]["email"]
+    else:
+        rsp = requests.post("https://developer.apple.com/services-account/QH65B2/account/getUserProfile", headers={
+            "cookie": parsed_context.cookies,
+        })
         data = rsp.json()
         account = data["userProfile"]["email"]
 
@@ -591,6 +637,7 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
         _info.cookie = json_str(parsed_context.cookies)
         _info.headers = json_str(parsed_context.headers)
         _info.save()
+        Log("通过curl登录[%s]" % account)
         return {
             "succ": True,
             "msg": "登录[%s]成功" % account,
@@ -662,3 +709,24 @@ def info(project: str):
 @Action
 def get_ci():
     pass
+
+
+@Action
+def security_code_sms(phone: str, sms: str):
+    Assert("apple" in sms.lower(), "短信非验证码短信[%s]" % sms)
+    code = re.compile(r"\d{4-6}").findall(sms)
+    Assert(code, "短信非验证码短信[%s]" % sms)
+    code = code[0]
+    _account = IosAccountInfo.objects.filter(phone=phone).first()  # type: IosAccountInfo
+    publish_security_code(_account.account if _account else "*", code, now())
+    return {
+        "succ": True,
+    }
+
+
+@Action
+def security_code(account: str, code: str):
+    publish_security_code(account, code, now())
+    return {
+        "succ": True,
+    }

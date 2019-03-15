@@ -184,6 +184,7 @@ class Action(DjangoAction):
             orig_params = dict(self.default_params)
             orig_params.update(req)
 
+        # noinspection PyNoneFunctionAssignment
         pre_ret = self.pre_wrapper(req, orig_params, *args, **kwargs)
         if pre_ret is not None:
             if pre_ret is True:

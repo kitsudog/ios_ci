@@ -14,20 +14,6 @@ from base.utils import base64, base64decode
 from frameworks.db import db_session, db_mgr, message_from_topic
 from .models import IosAccountInfo
 
-_default_headers = {
-    'X-Apple-Widget-Key': '83545bf919730e51dbfba24e7e8a78d2',
-    'Origin': 'https://idmsa.apple.com',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'X-Apple-I-FD-Client-Info': '{"U":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36","L":"en-US","Z":"GMT+08:00","V":"1.1","F":"7Wa44j1e3NlY5BSo9z4ofjb75PaK4Vpjt3Q9cUVlOrXTAxw63UYOKES5jfzmkflJfmNzl998tp7ppfAaZ6m1CdC5MQjGejuTDRNziCvTDfWk2Lwox0fEeMqgXK_Pmtd0SHp815LyjaY2.rINj.rINYOK0UjVsYUMnGWFfwMHDCQyG5me6sBLSsbXzU0l6sqKIrGfuzwg9wK9waEwHXXTSHCSPmtd0wVYPIG_qvoPfybYb5EvYTrYesR.pjCEFPnu_xf7_OLgiPFMtrs1OeyjaY2hDpBtOtJJIqSI6KUMnGWpwoNSUC56MnGW87gq1HACVd_8I9N9V4B5zLwBdo72_AIQjJKy_Aw7Q_14Ygh5Dwhw.Tf5.EKVg8o7I_3Divp8UaWUe0SFQ_14YefhSWHWY5BNveBBNlYCa1nkBMfs.DBR"}',
-    'Accept-Language': 'en-US,en;q=0.9,la;q=0.8',
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36',
-    'Content-Type': 'application/json',
-    'Accept': 'application/json, text/javascript, */*; q=0.01',
-    'Referer': 'https://idmsa.apple.com/appleauth/auth/signin?widgetKey=83545bf919730e51dbfba24e7e8a78d2&locale=en_US&font=sf',
-    'X-Requested-With': 'XMLHttpRequest',
-    'Connection': 'keep-alive',
-}
-
 __HOST = os.environ.get("VIRTUAL_HOST", "127.0.0.1:8000")
 
 
@@ -100,22 +86,35 @@ def _wait_code(info: IosAccountInfo, session: requests.Session, ts):
     """
     Log("等待二次验证")
     # last = info.security_code
-    last = ""
     expire = now() + 1200 * 1000
     while now() < expire:
         time.sleep(1)
         for data in message_from_topic(__pub, is_json=True, limit=1):
-            if data.get("account") == info.account and data.get("ts") > ts:
-                if data.get("code") != last:
-                    rsp = session.post("https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode", json={
-                        "securityCode": {"code": data["code"]},
-                    }, headers=_default_headers)
-                    if rsp.status_code != 204:
-                        continue
-                    rsp = session.post("https://idmsa.apple.com/appleauth/auth/2sv/trust", json={
-
+            if data.get("ts") > ts:
+                if data.get("code") and data.get("account") in {info.account, "*"}:
+                    rsp = session.post("https://idmsa.apple.com/appleauth/auth/verify/phone/securitycode", json={
+                        "securityCode": {
+                            "code": str(data.get("code")),
+                        },
+                        "phoneNumber": {
+                            "id": 1,
+                        },
+                        "mode": "sms",
                     })
+                    # Log("[%s] %s" % (rsp.status_code, rsp.json()))
+                    # rsp = session.post("https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode", json={
+                    #     "securityCode": {"code": data["code"]},
+                    # })
+                    if rsp.status_code != 200:
+                        Log("账号[%s]验证校验码[%s]失败[%s]" % (info.account, data.get("code"), rsp.status_code))
+                    # if rsp.status_code != 204:
+                    #     Log("账号[%s]验证校验码[%s]失败[%s]" % (info.account, data.get("code"), rsp.status_code))
+                    #     continue
+                    rsp = session.get("https://idmsa.apple.com/appleauth/auth/2sv/trust")
                     if rsp.status_code == 204:
+                        info.cookie = json_str(session.cookies)
+                        info.save()
+                        Log("账号[%s]登录成功" % info.account)
                         return session
     raise Fail("登录二次验证超时")
 
@@ -217,7 +216,6 @@ class IosAccountHelper:
         self.cookie.clear()
 
     def __login(self):
-        _key = "apple:developer:cookie"
         if self.csrf_ts > now():
             return
         with Block("账号登录"):
@@ -228,43 +226,47 @@ class IosAccountHelper:
                 },
                 headers={
                     'cookie': to_form_url(self.cookie, split=';'),
-                }, timeout=3).json()
-            if ret["resultCode"] == 0:
+                }, timeout=3).json() if not self.team_id else {}
+            if ret.get("resultCode") == 0:
                 self.teams = list(map(lambda x: x["teamId"], ret["teams"]))
                 self.info.team_id = self.team_id = self.teams[0]
                 self.info.teams = json_str(self.teams)
                 self.info.save()
             else:
                 # 重新登录
+                self.session = requests.session()
+                self.session.headers["User-Agent"] = "Spaceship 2.117.1"
+
+                rsp = self.session.get("https://olympus.itunes.apple.com/v1/app/config?hostname=itunesconnect.apple.com").json()
+                self.session.headers["X-Apple-Widget-Key"] = rsp["authServiceKey"]
+                # self.session.headers["X-Apple-Widget-Key"] = "16452abf721961a1728885bef033f28e"
+                self.session.headers["Accept"] = "application/json"
                 rsp = self.session.post("https://idmsa.apple.com/appleauth/auth/signin", json={
                     "accountName": self.account,
                     "password": self.password,
                     "rememberMe": True,
-                }, headers={
-                    "Accept": "application/json, text/javascript, */*; q=0.01",
-                    "X-Apple-Widget-Key": '16452abf721961a1728885bef033f28e',
-                    "Cookie": to_form_url(self.cookie, split=';'),
                 }, timeout=3)
+                self.session.headers["x-apple-id-session-id"] = rsp.headers["x-apple-id-session-id"]
+                self.session.headers["scnt"] = rsp.headers["scnt"]
                 if rsp.status_code == 409:
                     # 二次验证
+                    # noinspection PyUnusedLocal
+                    rsp = self.session.post("https://idmsa.apple.com/appleauth/auth")
+                    # Log("===> https://idmsa.apple.com/appleauth/auth [%s] %s" % (rsp.status_code, rsp.json()))
+
+                    # 切手机验证码
+                    rsp = self.session.put("https://idmsa.apple.com/appleauth/auth/verify/phone", json={
+                        "phoneNumber": {
+                            "id": 1
+                        },
+                        "mode": "sms",
+                    })
+                    Assert(rsp.status_code == 200, "[%s]短信发送失败" % self.account)
+                    # Log("===> https://idmsa.apple.com/appleauth/auth/verify/phone [%s] %s" % (rsp.status_code, rsp.json()))
                     _wait_code(self.info, self.session, now())
 
-                Assert(rsp.status_code == 200)
-                Assert(rsp.text.startswith("{"))
-                self.cookie.update({
-                    "myacinfo": rsp.cookies["myacinfo"]
-                })
+                self.cookie.update(self.session.cookies)
                 self.__expire = now() + 3600 * 1000
-                db_mgr.hset(_key, self.account, json_str(self.cookie))
-        Assert(self.cookie)
-        # 验证登录
-        rsp = self.session.get("https://developer.apple.com/account/")
-        Assert(rsp.status_code == 200)
-        if rsp.text.startswith("{"):
-            _ret = str_json(rsp.text)
-            if _ret["resultCode"] == 5003 or "NotAuthenticated" in _ret["resultString"]:
-                # 登录失败了
-                raise Fail("登录失败了[%s:%s][%s]" % (self.account, self.password, rsp.text))
         if not self.team_id:
             ret = requests.post(
                 "https://developer.apple.com/services-account/QH65B2/account/getTeams",
@@ -282,7 +284,7 @@ class IosAccountHelper:
             else:
                 Log("[%s]获取team失败登出了" % self.account)
                 self.__logout()
-        Log("apple账号[%s:%s]登录成功" % (self.account, self.team_id))
+        Log("apple账号[%s:%s]登录完成了" % (self.account, self.team_id))
 
 
 parser = argparse.ArgumentParser()
