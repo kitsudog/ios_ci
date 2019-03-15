@@ -27,7 +27,7 @@ nohup celery worker -A loop -B --loglevel INFO --logfile /var/log/server/celery.
 
 if [ ${UWSGI:-FALSE} = "TRUE" -o ${VIRTUAL_PROTO:-http} = "uwsgi" ]
 then
-    uwsgi --socket :8000 --gevent --gevent-monkey-patch --module open.wsgi  --async 100 --http-keepalive --chmod-socket=664
+    uwsgi --socket :8000 --gevent --gevent-monkey-patch --module ios_ci.wsgi  --async 100 --http-keepalive --chmod-socket=664
 else
     python3.6 manage.py runserver 0.0.0.0:8000
 fi
