@@ -24,7 +24,7 @@ SECRET_KEY = 'wv2(!kf*fhkuv6dxn^1c9=g-ef_8$&(17^*g=26g(t7_lmebby'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(os.environ.get("DEBUG", False))
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"] if DEBUG else ["open.sklxsj.com", "mdm.sklxsj.com"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"] if DEBUG else [os.environ.get("VIRTUAL_HOST", "www.baidu.com")]
 
 # Application definition
 
