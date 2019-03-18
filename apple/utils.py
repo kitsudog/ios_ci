@@ -210,6 +210,7 @@ class IosAccountHelper:
         self.info.save()
 
     def __logout(self):
+        Log("登出账号[%s]" % self.account)
         _key = "apple:developer:cookie"
         db_mgr.hdel(_key, self.account)
         self.__expire = 0
