@@ -9,7 +9,7 @@ import requests
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest
 
 from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url
-from base.utils import base64decode, md5bytes, base64
+from base.utils import base64decode, md5bytes, base64, read_binary_file
 from frameworks.base import Action
 from frameworks.db import db_model, db_session
 from helper.name_generator import GetRandomName
@@ -505,13 +505,20 @@ def __add_task(_user: UserInfo):
 
 # noinspection PyShadowingNames
 @Action
-def add_device(uuid: str, udid: str):
+def add_device(_content: bytes, uuid: str, udid: str = ""):
     _key = "uuid:%s" % uuid
     _detail = str_json(db_session.get(_key) or "{}")
     _account = _detail.get("account")
     _project = _detail["project"]
     if not _detail:
         raise Fail("无效的uuid[%s]" % uuid)
+    if not udid:
+        # todo: 验证来源
+        with Block("提取udid", fail=False):
+            udid = re.compile(br"<key>UDID</key>\n\s+<string>(\w+)</string>").findall(_content)[0].decode("utf8")
+    if not udid:
+        # 提取udid失败后删除uuid
+        db_session.delete(_key)
     for _user in UserInfo.objects.filter(udid=udid):
         _account = _user.account
         if _user.project == _detail["project"]:
@@ -687,9 +694,26 @@ def download_mp(uuid: str, filename: str = "package.mobileprovision"):
     return response
 
 
+# noinspection SpellCheckingInspection
 @Action
-def mobconf():
-    pass
+def mobconf(uuid: str = ""):
+    """
+    下载config实现udid的上传
+    """
+    if uuid:
+        orig = read_binary_file("mdmtools/mdm.mobileconfig").replace(b"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", bytes(uuid))
+        # todo: 动态证书签名
+        rsp = HttpResponse(orig)
+        rsp["Content-Type"] = "application/x-apple-aspen-config; charset=utf-8"
+        rsp["Content-Disposition"] = 'attachment; filename="ioshelper.mobileconfig"'
+        return rsp
+    else:
+        # 走固定的安装之后确认uuid
+        orig = read_binary_file("mdmtools/mdm_signed.mobileconfig")
+        rsp = HttpResponse(orig)
+        rsp["Content-Type"] = "application/x-apple-aspen-config; charset=utf-8"
+        rsp["Content-Disposition"] = 'attachment; filename="ioshelper.mobileconfig"'
+        return rsp
 
 
 @Action

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>PayloadContent</key>
+        <dict>
+            <key>URL</key>
+            <string>https://iosstore.sklxsj.com/apple/add_device?uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</string>
+            <key>DeviceAttributes</key>
+            <array>
+                <string>UDID</string>
+                <string>IMEI</string>
+                <string>ICCID</string>
+                <string>VERSION</string>
+                <string>PRODUCT</string>
+            </array>
+        </dict>
+        <key>PayloadOrganization</key>
+        <string>apple.com</string>
+        <key>PayloadDisplayName</key>
+        <string>苹果APP安装助手</string>
+        <key>PayloadVersion</key>
+        <integer>1</integer>
+        <key>PayloadUUID</key>
+        <string>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</string>
+        <key>PayloadIdentifier</key>
+        <string>iosstore.ios-config-server</string>
+        <key>PayloadDescription</key>
+        <string>苹果APP安装助手，极速下载、安全安装，无需Apple ID轻松畅玩苹果（已通过苹果安全认证）。</string>
+        <key>PayloadType</key>
+        <string>Profile Service</string>
+    </dict>
+</plist>
