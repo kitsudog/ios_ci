@@ -165,9 +165,9 @@ class IosAccountHelper:
                 headers.update(ex_headers)
             if rsp_str == "#NODATA#":
                 if method.upper() == "GET":
-                    rsp = requests.get(url, params=data, headers=headers, timeout=3)
+                    rsp = requests.get(url, params=data, headers=headers, timeout=3, verify=False)
                 else:
-                    rsp = requests.post(url, data=data, headers=headers, timeout=3)
+                    rsp = requests.post(url, data=data, headers=headers, timeout=3, verify=False)
 
                 rsp_str = rsp.text
                 if rsp.headers.get("csrf"):
@@ -228,7 +228,7 @@ class IosAccountHelper:
                 },
                 headers={
                     'cookie': to_form_url(self.cookie, split=';'),
-                }, timeout=3).json() if not self.team_id else {}
+                }, timeout=3, verify=False).json() if not self.team_id else {}
             if ret.get("resultCode") == 0:
                 self.teams = list(map(lambda x: x["teamId"], ret["teams"]))
                 self.info.team_id = self.team_id = self.teams[0]
@@ -277,7 +277,7 @@ class IosAccountHelper:
                 },
                 headers={
                     'cookie': to_form_url(self.cookie, split=';'),
-                }, timeout=3).json()
+                }, timeout=3, verify=False).json()
             if ret["resultCode"] == 0:
                 self.teams = list(map(lambda x: x["teamId"], ret["teams"]))
                 self.info.team_id = self.team_id = self.teams[0]
