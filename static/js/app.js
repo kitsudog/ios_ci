@@ -160,7 +160,7 @@ define('components/udid/udid', function (require, exports, module) {
                     }
                 });
                 */
-                window.location.href = '/apple/mobconf?s=' + $('#ios-download').attr('s1');
+                window.location.href = '/apple/mobconf?uuid=' + $('#ios-download').attr('s1');
             });
         },
         hasPopInstall: function hasPopInstall() {
