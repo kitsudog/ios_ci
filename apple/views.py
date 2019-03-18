@@ -9,7 +9,7 @@ from typing import Dict, List, Callable, Optional
 
 import gevent
 import requests
-from django.http import HttpResponseRedirect, HttpResponse, HttpRequest
+from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect
 
 from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url, test_env
 from base.utils import base64decode, md5bytes, base64, read_binary_file
@@ -512,7 +512,7 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     _key = "uuid:%s" % uuid
     _detail = str_json(db_session.get(_key) or "{}")
     _account = _detail.get("account")
-    _project = _detail["project"]
+    project = _detail["project"]
     if not _detail:
         raise Fail("无效的uuid[%s]" % uuid)
     if not udid:
@@ -535,7 +535,7 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
 
     if not _account:
         Log("为设备[%s]分配账号" % udid)
-        _account = __fetch_account(udid, _project, __add_device)
+        _account = __fetch_account(udid, project, __add_device)
     else:
         _account = IosAccountInfo.objects.filter(account=_account).first()
 
@@ -550,9 +550,7 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     else:
         db_session.delete(_key)
     __add_task(_user)
-    return {
-        "succ": True,
-    }
+    return HttpResponsePermanentRedirect("https://iosstore.sklxsj.com/detail.php?project=%s" % project)
 
 
 @Action
