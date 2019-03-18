@@ -23,7 +23,7 @@ python3.6 manage.py makemigrations --noinput
 python3.6 manage.py migrate
 
 # todo: celery -B 只用于debug模式
-nohup celery worker -A loop -B --loglevel INFO --logfile /var/log/server/celery.log &
+# nohup celery worker -A loop -B --loglevel INFO --logfile /var/log/server/celery.log &
 
 if [ ${UWSGI:-FALSE} = "TRUE" -o ${VIRTUAL_PROTO:-http} = "uwsgi" ]
 then

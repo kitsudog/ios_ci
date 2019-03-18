@@ -2,11 +2,11 @@ import argparse
 import os
 import re
 import shlex
-import time
 from collections import OrderedDict, namedtuple
 from http.cookies import SimpleCookie
 from typing import Dict, Union
 
+import gevent
 import requests
 
 from base.style import str_json, now, to_form_url, Assert, Log, json_str, Fail, str_json_i, Block
@@ -84,11 +84,11 @@ def _wait_code(info: IosAccountInfo, session: requests.Session, ts):
     """
     等待二次提交的需要
     """
-    Log("等待二次验证")
+    Log("等待[%s]二次验证" % info.account)
     # last = info.security_code
     expire = now() + 1200 * 1000
     while now() < expire:
-        time.sleep(1)
+        gevent.sleep(1)
         for data in message_from_topic(__pub, is_json=True, limit=1):
             if data.get("ts") > ts:
                 if data.get("code") and data.get("account") in {info.account, "*"}:

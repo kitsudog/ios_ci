@@ -7,13 +7,14 @@ import time
 from subprocess import call
 from typing import Dict, List, Callable, Optional
 
+import gevent
 import requests
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest
 
 from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url, test_env
 from base.utils import base64decode, md5bytes, base64, read_binary_file
 from frameworks.base import Action
-from frameworks.db import db_model, db_session
+from frameworks.db import db_model, db_session, message_from_topic
 from helper.name_generator import GetRandomName
 from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo
 from .utils import IosAccountHelper, publish_security_code, curl_parse_context, entry, get_capability
@@ -736,6 +737,18 @@ def mobconf(uuid: str = ""):
         rsp["Content-Type"] = "application/x-apple-aspen-config; charset=utf-8"
         rsp["Content-Disposition"] = 'attachment; filename="ioshelper.mobileconfig"'
         return rsp
+
+
+@Action
+def wait():
+    __pub = db_session.pubsub()
+    __pub.subscribe("account:security:code")
+    expire = now() + 1200 * 1000
+    while now() < expire:
+        gevent.sleep(1)
+        for data in message_from_topic(__pub, is_json=True, limit=1):
+            return data
+    raise Fail("超时")
 
 
 @Action
