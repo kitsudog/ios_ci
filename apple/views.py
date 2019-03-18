@@ -760,8 +760,8 @@ def get_ci():
 @Action
 def security_code_sms(phone: str, sms: str):
     Assert("apple" in sms.lower(), "短信非验证码短信[%s]" % sms)
-    code = re.compile(r"\d{4-6}").findall(sms)
-    Assert(code, "短信非验证码短信[%s]" % sms)
+    code = re.compile(r"\d{4,6}").findall(sms)
+    Assert(len(code), "短信非验证码短信[%s]" % sms)
     code = code[0]
     _account = IosAccountInfo.objects.filter(phone=phone).first()  # type: IosAccountInfo
     publish_security_code(_account.account if _account else "*", code, now())
