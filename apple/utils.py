@@ -172,7 +172,7 @@ class IosAccountHelper:
                 rsp_str = rsp.text
                 if rsp.headers.get("csrf"):
                     self.csrf = rsp.headers["csrf"]
-                    self.csrf_ts = rsp.headers["csrf_ts"]
+                    self.csrf_ts = int(rsp.headers["csrf_ts"])
                 Assert(rsp.status_code == status, "请求[%s]异常[%s]" % (title, rsp.status_code))
                 if json_api:
                     _data = str_json_i(rsp_str) or {}
@@ -199,7 +199,7 @@ class IosAccountHelper:
 
     @property
     def is_login(self):
-        return "myacinfo" in self.cookie and self.team_id
+        return "myacinfo" in self.cookie and self.team_id and self.cookie
 
     def __save_cookie(self, cookie: Dict):
         _orig = self.info.cookie
