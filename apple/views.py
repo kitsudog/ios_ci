@@ -2,13 +2,15 @@
 import datetime
 import os
 import re
+import tempfile
 import time
+from subprocess import call
 from typing import Dict, List, Callable, Optional
 
 import requests
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest
 
-from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url
+from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url, test_env
 from base.utils import base64decode, md5bytes, base64, read_binary_file
 from frameworks.base import Action
 from frameworks.db import db_model, db_session
@@ -519,6 +521,9 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     if not udid:
         # 提取udid失败后删除uuid
         db_session.delete(_key)
+        return {
+            "succ": False,
+        }
     for _user in UserInfo.objects.filter(udid=udid):
         _account = _user.account
         if _user.project == _detail["project"]:
@@ -538,7 +543,11 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     _user.project = _detail["project"]
     _user.account = _account.account
     _user.save()
-    # db_session.delete(_key)
+    if test_env():
+        # 测试环境可能uuid要重复测
+        pass
+    else:
+        db_session.delete(_key)
     __add_task(_user)
     return {
         "succ": True,
@@ -701,12 +710,25 @@ def mobconf(uuid: str = ""):
     下载config实现udid的上传
     """
     if uuid:
-        orig = read_binary_file("mdmtools/mdm.mobileconfig").replace(b"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", bytes(uuid))
-        # todo: 动态证书签名
-        rsp = HttpResponse(orig)
-        rsp["Content-Type"] = "application/x-apple-aspen-config; charset=utf-8"
-        rsp["Content-Disposition"] = 'attachment; filename="ioshelper.mobileconfig"'
-        return rsp
+        orig = read_binary_file("mdmtools/mdm.mobileconfig").replace(b"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", uuid.encode("utf8"))
+        _, in_path = tempfile.mkstemp()
+        _, out_path = tempfile.mkstemp()
+        try:
+            # todo: 缓存uuid的mobileconfig文件
+            with open(in_path, mode="wb") as fout:
+                fout.write(orig)
+            assert call(
+                ["openssl", "smime", "-sign", "-in", in_path, "-out", out_path, "-signer", "mdmtools/mobconf/InnovCertificates.pem",
+                 "-inkey",
+                 "mdmtools/mobconf/key.pem", "-certfile", "mdmtools/mobconf/root.crt.pem", "-outform", "der", "-nodetach", "-passin",
+                 "pass:123123"], timeout=10) == 0
+            rsp = HttpResponse(read_binary_file(out_path))
+            rsp["Content-Type"] = "application/x-apple-aspen-config; charset=utf-8"
+            rsp["Content-Disposition"] = 'attachment; filename="ioshelper.mobileconfig"'
+            return rsp
+        finally:
+            os.remove(in_path)
+            os.remove(out_path)
     else:
         # 走固定的安装之后确认uuid
         orig = read_binary_file("mdmtools/mdm_signed.mobileconfig")
