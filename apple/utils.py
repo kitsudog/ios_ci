@@ -11,7 +11,7 @@ import requests
 
 from base.style import str_json, now, to_form_url, Assert, Log, json_str, Fail, str_json_i, Block
 from base.utils import base64, base64decode
-from frameworks.db import db_session, db_mgr, message_from_topic
+from frameworks.db import db_session, message_from_topic
 from .models import IosAccountInfo
 
 __HOST = os.environ.get("VIRTUAL_HOST", "127.0.0.1:8000")
@@ -212,9 +212,10 @@ class IosAccountHelper:
     def __logout(self):
         Log("登出账号[%s]" % self.account)
         _key = "apple:developer:cookie"
-        db_mgr.hdel(_key, self.account)
         self.__expire = 0
         self.cookie.clear()
+        self.info.cookie = "{}"
+        self.info.save()
 
     def __login(self):
         if self.csrf_ts > now():
