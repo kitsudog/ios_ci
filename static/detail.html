@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
     <meta name="version" content="1">
 
-    <link integrity="" rel="stylesheet" href="css/base.css?v=2.1">
+    <title></title>
+
+    <link integrity="" rel="stylesheet" href="css/base.css?v=2.2">
     <link rel="stylesheet" type="text/css" href="css/popup.css?v=2.1"/>
     <link rel="stylesheet" type="text/css" href="css/udid.css?v=2.1"/>
     <link rel="stylesheet" type="text/css" href="css/animate.min.css?v=2.1"/>
@@ -74,7 +76,7 @@
     document.onreadystatechange = documentReadyState;
 
     function documentReadyState() {
-        if (document.readyState === "complete") {
+        if (document.readyState == "complete") {
             completed();
             window.clearInterval(rsid);
         } else {
@@ -90,7 +92,7 @@
     rsid = window.setInterval(documentReadyState, 1000);
 </script>
 
-<div style=" overflow:hidden; width:0px; height:0; margin:0 auto; position:absolute; top:-800px;"><img id='#app_icon#' src=""></div>
+<div style=" overflow:hidden; width:0px; height:0; margin:0 auto; position:absolute; top:-800px;"><img src=""></div>
 <nav id="localnav" class="localnav" style="display: none;">
     <div class="localnav-background">
     </div>
@@ -101,7 +103,7 @@
         <div style="display: inline-block;width: 32vw;vertical-align: top;">
             <div id="appdetails-icon" class="appdetails-icon small-5" style="width: 100%;">
                 <div class="ios-app-icon">
-                    <img id="#app_icon#" class="ios-app-icon-img" src="" style="background-color: #fefefe;" alt>
+                    <img class="ios-app-icon-img" id="#app_icon#" src="" style="background-color: #fefefe;" alt>
                 </div>
             </div>
         </div>
@@ -111,10 +113,10 @@
                     <header class="ios-app-brief-header">
                         <h1 class="ios-app-title"
                             style="font-size: 20px;height: 1.2223em;width: 50vw;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">
-                            <span id="#app_name#"></span> <span class=" ios-app-title-cls" style="display: none;">18+</span>
+                            <span id="#app_name#"></span> <span class="ios-app-title-cls" style="display: none;">18+</span>
                         </h1>
                         <h2 class="ios-app-subtitle" style="font-size: 14px;"><span id="#app_desc#"></span></h2>
-                        <h2 class="ios-app-vendor" style="font-size: 14px;"><a href="javascript:;"><span id="#app_owner#"></span></a></h2>
+                        <h2 class="ios-app-vendor" style="font-size: 14px;"><a href="javascript:;"><span id=#app_owner#></span></a></h2>
                     </header>
                 </div>
             </div>
@@ -124,15 +126,12 @@
                         <li id="install_btn_container" class="install-btn-container " style="display: inline-block;">
                             <div style="width: 20px;height: 20px;padding: 4px;border-width: 1px;">Loading</div>
                             <div style="width: 88px;">
-                                <a data-ios-down-new="1" auto-open="1" s1="" id="ios-download"
-                                   href="javascript:;" style="color: #FFF;" onclick="require('components/udid/udid').installUDID()">免费安装</a>
-                            </div>
-                            <div data-ios-installing="1" auto-open="0" id="ios-installing" style="border-color: darkgray;display: none">
-                                <div class="invert_btn_txt">安装</div>
+                                <a data-ios-down-new="1" auto-open="1" s1="xxx" id="ios-download" href="javascript:;" style="color: #FFF;"
+                                   onclick="require('components/udid/udid').installUDID()">免费安装</a>
                             </div>
                             <div>正在授权应用 <span id="install_tips_progress">0%</span> <span style="color: #0070c9;">请等待授权完成</span></div>
                         </li>
-                        <a id="trylink" href="fkapp10058://openApp" style="width: 0px;display: none;"></a>
+                        <a id="trylink" href="#app_scheme#" style="width: 0px;display: none;"></a>
                         <!-- <li id="showhelp" class="ios-app-install-btn" style="width: 28px;position: relative;float: right;top: 0px;right: 10px;display: none;" onclick="document.all['pagemask'].style.display='block';document.body.style.height='100%';document.body.style.overflow='hidden';this.style.backgroundColor='darkgray';this.style.borderColor='darkgray';$('#moremenu').addClass('showmore_anim');">?</li> -->
                     </ul>
                 </div>
@@ -145,16 +144,16 @@
     <section class="l-content-width">
         <div class="ios-app-rating" style="width:45%">
             <figure class="ios-app-rating">
-                <figcaption class="ios-app-rating-caption-big"></figcaption>
+                <figcaption class="ios-app-rating-caption-big"><span id="#app_rank#"></span></figcaption>
                 <span class="ios-app-rating-star-outline-big vertical_mid">
-                            <span class="ios-app-rating-stars-big ios-app-rating-stars-big-"></span>
+                            <span class="ios-app-rating-stars-big ios-app-rating-stars-big-5"></span>
                         </span>
             </figure>
-            <h5 class="ios-caption-subtitle"> 个评分</h5>
+            <h5 class="ios-caption-subtitle"><span id="#app_rate#"></span> 个评分</h5>
         </div>
         <div class="ios-app-rating" style="width:25%; text-align: center;">
-            <div class="ios-app-rating-caption-big"><font style="vertical-align: super;font-size: 12px">#</font>1</div>
-            <h5 class="ios-caption-subtitle"><span id="#app_name#"></span></h5>
+            <div class="ios-app-rating-caption-big"><font style="vertical-align: super;font-size: 12px">#</font>8</div>
+            <h5 class="ios-caption-subtitle"><span id="#app_cate#"></span></h5>
         </div>
         <div class="ios-app-rating" style="width:25%; text-align: right;">
             <div class="ios-app-rating-caption-big">18+</div>
@@ -171,7 +170,7 @@
         <div class="ellipsis">
             <div class="ellipsis-container">
                 <div class="ellipsis-content">
-                    <span id="#app_name#"></span>
+                    <span id="#app_desc#"></span>
                 </div>
                 <div class="ellipsis-ghost">
                     <div class="ellipsis-placeholder"></div>
@@ -185,7 +184,7 @@
         <div class="ios-app-cust-ratings">
             <div class="ios-app-cust-ratings_stats">
                 <h3 class="ios-app-ratings_avg">
-                    <span class="ios-app-ratings_avg_disp"></span>
+                    <span class="ios-app-ratings_avg_disp"><span id="#app_rank#"></span></span>
                     满分 5 分
                 </h3>
             </div>
@@ -194,35 +193,35 @@
                     <div class="ios-app-ratings-bar-row">
                         <span class="ios-app-rating-stargraph__stars ios-app-rating-stargraph__stars-5"></span>
                         <div class="ios-app-rating-bargraph__bar">
-                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: 91.5676%;"></div>
                         </div>
                     </div>
                     <div class="ios-app-ratings-bar-row">
                         <span class="ios-app-rating-stargraph__stars ios-app-rating-stargraph__stars-4"></span>
                         <div class="ios-app-rating-bargraph__bar">
-                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: 7.6469%;"></div>
                         </div>
                     </div>
                     <div class="ios-app-ratings-bar-row">
                         <span class="ios-app-rating-stargraph__stars ios-app-rating-stargraph__stars-3"></span>
                         <div class="ios-app-rating-bargraph__bar">
-                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: 0.5005%;"></div>
                         </div>
                     </div>
                     <div class="ios-app-ratings-bar-row">
                         <span class="ios-app-rating-stargraph__stars ios-app-rating-stargraph__stars-2"></span>
                         <div class="ios-app-rating-bargraph__bar">
-                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: 0.2503%;"></div>
                         </div>
                     </div>
                     <div class="ios-app-ratings-bar-row">
                         <span class="ios-app-rating-stargraph__stars "></span>
                         <div class="ios-app-rating-bargraph__bar">
-                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: %;"></div>
+                            <div class="ios-app-rating-bargraph__bar-foreground" style="width: 0.0348%;"></div>
                         </div>
                     </div>
                 </figure>
-                <h5 class="ios-app-rating-count"> 个评分</h5>
+                <h5 class="ios-app-rating-count"><span id="#app_rate#"></span> 个评分</h5>
             </div>
         </div>
         <div class="ios-app-comments-list">
@@ -231,10 +230,10 @@
     <section class="l-content-width section section--bordered">
         <h2 class="section__headline">新功能</h2>
         <div class="ios-app-whatsnew-content ios-app-whatsnew-latest">
-            <p class="">版本 1.0.0.101</p>
+            <p class=""><span id="#app_tip#"></span></p>
         </div>
         <div class="ios-app-whatsnew-content">
-            <span class="we-clamp__contents">-</span>
+            <span class="we-clamp__contents"></span>
         </div>
     </section>
     <section class="l-content-width section section--bordered">
@@ -246,7 +245,7 @@
             </div>
             <div class="ios-app-infor-list_row row-bottom-border">
                 <dt class="ios-app-infor-list_row_term">大小</dt>
-                <dd class="ios-app-infor-list_row_val">223018 KB</dd>
+                <dd class="ios-app-infor-list_row_val"><span id="#app_size#"></span></dd>
             </div>
             <div class="ios-app-infor-list_row row-bottom-border">
                 <dt class="ios-app-infor-list_row_term">类别</dt>
@@ -358,7 +357,12 @@ require.resourceMap({
                 $("[id=#app_name#]").text(app['name']);
                 $("[id=#app_desc#]").text(app['desc']);
                 $("[id=#app_owner#]").text(app['owner']);
+                $("[id=#app_tip#]").text(app['tip'] || "新版本");
+                $("[id=#app_rate#]").text(app['rate'] || "14.1K");
+                $("[id=#app_rank#]").text(app['rank'] || "4.5");
+                $("[id=#app_cate#]").text(app['cate'] || "游戏");
                 $("[id=#app_icon#]").attr('src', app['icon']);
+                $("[id=trylink]").attr('href', app['scheme']);
                 uuid = app['uuid'];
                 // 判断是否注册
                 if (app["ready"]) {
@@ -381,112 +385,6 @@ require.resourceMap({
                 $('[auto-open=1]').click();
             }, 7 * 1000);
         });
-    }
-</script>
-<script type="text/javascript">
-    lastProgress = 0;
-    lastBytes = 0;
-    isDownloading = false;
-    hasTracked = false;
-
-    function _dlproc() {
-        $.getJSON("/apple/dlprog?uuid=" + uuid, function (data) {
-            if (data.code === 0) {
-                // 停用下载按钮，改为重试按钮
-                if (!isDownloading) {
-                    isDownloading = true;
-                    $('#ios-installing').prop('click', null).off();
-                    $('#reload_dl').css('display', 'inline-block');
-                    $('#reload_dl').click(function () {
-                        if (confirm("确定重新下载吗？")) {
-                            document.body.innerHTML += '<div id="loading_background" class="page_loading_background" style=""><div class="page_loading_inner"><i class="fa fa-spinner fa-spin animated"></i> 正在加载中…</div></div>';
-                            window.location.reload();
-                        }
-                    });
-                }
-
-                if (data.progress === -1 || data.total > data.progress) {
-                    var progress = (data.progress > 0) ? (10 + 90 * data.progress / data.total).toFixed(0) : Math.min(++lastProgress, 10);
-                    $('#ios-installing').css('background', 'linear-gradient(90deg,#017AFE ' + progress + '%,lightgray ' + progress + '%)');
-                    $('#ios-installing div').text('下载中 ' + progress + '%');
-                    if (data.progress > 0) {
-                        var speed = (data.progress - lastBytes);
-                        var remains = '';
-                        if (speed > 0) {
-                            remains = Math.floor((data.total - data.progress) / speed);
-                            if (remains > 60) remains = '约' + (Math.floor(remains / 60) + 1) + '分钟';
-                            else remains = '约' + remains + '秒';
-                        }
-                        if (speed >= 1048576) speed = (speed / 1048576).toFixed(1) + 'MB/s';
-                        else speed = (speed / 1024).toFixed(1) + 'KB/s';
-
-                        $('#dlinfos').text(Math.floor(data.total / 1048576) + 'MB ' + speed + ' ' + remains);
-                        lastBytes = data.progress;
-
-                        if (!hasTracked) {
-                            hasTracked = true;
-                        }
-                    }
-                    window.setTimeout(_dlproc, 1000, s);
-                } else {
-                    $('#ios-installing').css('background', '#017AFE');
-                    $('#ios-installing div').text('安装中……');
-                    $('#dlinfos').text('');
-
-                    function countdown(f, n) {
-                        $('#ios-installing div').text('安装中……' + n + '秒');
-                        if (n > 0)
-                            window.setTimeout(f, 1000, f, n - 1);
-                        else {
-                            $('#ios-installing div').text('打开');
-                            $('#ios-installing').click(function () {
-                                // 尝试打开
-                                $('#trylink').off();
-                                $('#trylink').on('click', function () {
-                                    $.ajax("https://www.itunesappstore.cn/ioshelper/trylink.php?s=" + s);
-                                    window.setTimeout(function (tryTime) {
-                                        thisTime = new Date().getTime();
-                                        if (Math.abs(thisTime - tryTime - 5000) < 1000) {
-                                            $('#ios-installing div').text('已安装，请在桌面打开');
-                                            alert('已安装，请在桌面打开');
-                                        }
-                                    }, 5000, new Date().getTime());
-                                });
-                                $('#trylink').get()[0].click();
-                            });
-                        }
-                    }
-
-                    countdown(countdown, 20);
-                }
-            } else {
-                window.setTimeout(_dlproc, 3000, s);
-            }
-        })
-            .fail(function (xhr, status, error) {
-                console.log(xhr, status, error);
-                window.setTimeout(_dlproc, 3000, s);
-            });
-    }
-
-    function install_will_ok() {
-        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("https://iosstore.sklxsj.com/apple/manifest.php?uuid=" + uuid);
-        $('#ios-installing').css('width', 'auto');
-        $('#ios-installing div').css('font-size', '12px').css('width', '154px').text("准备安装");
-        $('#install_btn_container').removeClass('install-btn-container-loading');
-        $('#ios-installing').prop('click', null).off();
-        $('#ios-installing').click(function () {
-            if (!isDownloading) {
-                window.location.href = manifest_url;
-                $('#ios-installing div').text("等待下载");
-                window.clearTimeout(_dlproc);
-                window.setTimeout(_dlproc, 3000);
-            } else {
-
-            }
-        });
-        // window.location.href=manifest_url;
-        $('#ios-installing').click();
     }
 </script>
 <div id="pagemask"

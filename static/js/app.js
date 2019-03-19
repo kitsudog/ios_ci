@@ -16,9 +16,9 @@ define('page/m/m', function (require, exports, module) {
             //     // window.location.href = G.channel.i + '&from=inrechage';
             //     window.location.href = 'https://www.itunesappstore.cn/udid.php';
             // }).fail(function () {
-            UDID.hasGuideInstall();
+                UDID.hasGuideInstall();
             // });
-            $('[data-ios-down]').attr('auto-open', 0);
+            $('[data-ios-down]').attr('auto-open',0);
         });
 
         $('.m-xx-banner').addClass('ap');
@@ -84,15 +84,15 @@ define('components/udid/udid', function (require, exports, module) {
                     return _popup2['default'].dialog.create('<div class="wechat-tip"></div>').show();
                     // return _popup2['default'].autoTip("请点击右上角在safari中打开");
                 } else {
-                    var safariTipsHtml = '<div class="pop-dialog-confirm pop-dialog-white popup-template pop-dialog"><div class="popup-template-banner">\n<img src="img/safari-tip_banner.jpg" alt="">\n</div>\n<div class="popup-template-safari">\n<input type="text" name="" value="' + window.location.href + '">\n<button type="button" class="safari-copy" name="button" data-clipboard-text="' + window.location.href + '&from=copy" onclick="$.ajax(' + "'https://www.itunesappstore.cn/statistics/copyurl'" + ')">复制</button>\n</div>\n</div>';
+                    var safariTipsHtml = '<div class="pop-dialog-confirm pop-dialog-white popup-template pop-dialog"><div class="popup-template-banner">\n<img src="img/safari-tip_banner.jpg" alt="">\n</div>\n<div class="popup-template-safari">\n<input type="text" name="" value="'+window.location.href+'">\n<button type="button" class="safari-copy" name="button" data-clipboard-text="'+window.location.href+'&from=copy" onclick="$.ajax('+"'https://www.itunesappstore.cn/statistics/copyurl'"+')">复制</button>\n</div>\n</div>';
                     _popup2['default'].dialog.create(safariTipsHtml).show();
                     var y = require("components/clipboard"),
-                        k = new y(".safari-copy");
-                    k.on("success", function (e) {
-                        _popup2["default"].autoTip("复制成功")
-                    }), k.on("error", function (e) {
-                        _popup2["default"].autoTip("请手动复制")
-                    })
+                            k = new y(".safari-copy");
+                        k.on("success", function(e) {
+                            _popup2["default"].autoTip("复制成功")
+                        }), k.on("error", function(e) {
+                            _popup2["default"].autoTip("请手动复制")
+                        })
                     return;
                     // return _popup2['default'].autoTip("请复制链接在safari中打开");
                 }
@@ -103,13 +103,13 @@ define('components/udid/udid', function (require, exports, module) {
                         return _popup2['default'].confirm(
                             '<p class="font12 tl">检测到尚未允许Cookie访问，需允许才能获取设备UDID，以便安装"苹果APP安装助手"。</p>\
                                <p class="font12 tl">设置路径：[设置] → [Safari] → [阻止Cookie] → 勾选[始终允许]</p>    ', {
-                                isClose: false,
-                                title: '温馨提示',
-                                btns: [{
+                            isClose: false,
+                            title: '温馨提示',
+                            btns: [{
                                     text: "确定",
                                     color: "sure"
                                 }]
-                            });
+                        });
                     } else {
                         // 如果开启无痕模式 提醒用户关闭
                         try {
@@ -118,13 +118,13 @@ define('components/udid/udid', function (require, exports, module) {
                             return _popup2['default'].confirm(
                                 '<p class="font12 tl">Safari无痕浏览影响"苹果APP安装助手"的使用，建议关闭。</p>\
                              <p class="font12 tl">关闭方法：【Safari】→点击【右下角更多窗口按钮】→取消勾选【无痕浏览】”</p>    ', {
-                                    isClose: false,
-                                    title: '温馨提示',
-                                    btns: [{
+                                isClose: false,
+                                title: '温馨提示',
+                                btns: [{
                                         text: "确定",
                                         color: "sure"
                                     }]
-                                });
+                            });
                         }
                         // ios11
                         try {
@@ -133,17 +133,16 @@ define('components/udid/udid', function (require, exports, module) {
                             return _popup2['default'].confirm(
                                 '<p class="font12 tl">Safari无痕浏览影响"苹果APP安装助手"的使用，建议关闭。</p>\
                                <p class="font12 tl">关闭方法：【Safari】→点击【右下角更多窗口按钮】→取消勾选【无痕浏览】”</p>    ', {
-                                    isClose: false,
-                                    title: '温馨提示',
-                                    btns: [{
+                                isClose: false,
+                                title: '温馨提示',
+                                btns: [{
                                         text: "确定",
                                         color: "sure"
                                     }]
-                                });
+                            });
                         }
                     }
-                } catch (e) {
-                }
+                } catch (e) {}
             }
             callback && callback();
         },
@@ -171,12 +170,12 @@ define('components/udid/udid', function (require, exports, module) {
                     isClose: false,
                     title: false,
                     btns: [{
-                        text: "确定",
-                        color: "sure",
-                        callback: function callback() {
-                            _this2.installUDID();
-                        }
-                    }]
+                            text: "确定",
+                            color: "sure",
+                            callback: function callback() {
+                                _this2.installUDID();
+                            }
+                        }]
                 });
             });
         },
@@ -257,8 +256,7 @@ define('components/popup/popup', function (require, exports, module) {
                     if (item !== null) {
                         allValueIsNull = false;
                     }
-                }
-                ;
+                };
                 if (allValueIsNull) {
                     layerStack = [];
                 }
@@ -285,8 +283,7 @@ define('components/popup/popup', function (require, exports, module) {
                         return this;
                     },
                     fire: function fire() {
-                        var args = [arguments[0],
-                            [].slice.call(arguments, 1)];
+                        var args = [arguments[0], [].slice.call(arguments, 1)];
                         this.__publisherJqObject.trigger.apply(this.__publisherJqObject, args);
                         return this;
                     },
@@ -298,8 +295,7 @@ define('components/popup/popup', function (require, exports, module) {
                             if (eventMap.hasOwnProperty(i)) {
                                 this.__publisherJqObject.off(i);
                             }
-                        }
-                        ;
+                        };
                         return this;
                     },
                     // 销毁发布者
@@ -432,8 +428,7 @@ define('components/popup/popup', function (require, exports, module) {
                     // pop-dialog 是初始化标志，保存了当前的 dialog 对象
                     if ($root.data("pop-dialog")) {
                         return $root.data("pop-dialog");
-                    }
-                    ;
+                    };
                     $root.data("pop-dialog", this);
 
                     // 记录原始位置
@@ -446,10 +441,8 @@ define('components/popup/popup', function (require, exports, module) {
                     this.$root = $root;
 
                     this.options = $.extend({
-                        onBeforeShow: function onBeforeShow() {
-                        },
-                        onClose: function onClose() {
-                        },
+                        onBeforeShow: function onBeforeShow() {},
+                        onClose: function onClose() {},
                         // 点击黑色处，是否关闭
                         closeIfClickBack: false
                     }, options || {});
@@ -478,16 +471,16 @@ define('components/popup/popup', function (require, exports, module) {
                         var $elem = $(this);
                         var role = $elem.data("role");
                         switch (role) {
-                            case "cancel":
-                            case "hide":
-                            case "close":
-                                self.hide();
-                                break;
-                            case "destroy":
-                                self.destroy();
-                                break;
-                            default:
-                                self.fire(role, $elem, e);
+                        case "cancel":
+                        case "hide":
+                        case "close":
+                            self.hide();
+                            break;
+                        case "destroy":
+                            self.destroy();
+                            break;
+                        default:
+                            self.fire(role, $elem, e);
                         }
                     });
 
@@ -616,23 +609,20 @@ define('components/popup/popup', function (require, exports, module) {
                         btns: [{}, {}]
                     }, options || {});
                     var defBtns = [{
-                        text: "取消",
-                        color: "cancel",
-                        callback: function callback() {
-                        }
-                    }, {
-                        text: "确认",
-                        color: "sure",
-                        callback: function callback() {
-                        }
-                    }];
+                            text: "取消",
+                            color: "cancel",
+                            callback: function callback() {}
+                  }, {
+                            text: "确认",
+                            color: "sure",
+                            callback: function callback() {}
+                  }];
 
                     // 合并按钮默认值
                     var btns = options.btns;
                     for (var i = 0, len = Math.min(btns.length, defBtns.length); i < len; i++) {
                         btns[i] = $.extend(defBtns[i], btns[i]);
-                    }
-                    ;
+                    };
 
                     this.options = options;
                     html = this.createContent(html);
@@ -649,8 +639,9 @@ define('components/popup/popup', function (require, exports, module) {
                 createContent: function createContent(content) {
                     var options = this.options;
                     var html = ['<div class="pop-dialog-confirm pop-dialog-white">', '' + (options.isClose ?
-                        "<span class='pop-dialog-close' data-role='close'></span>" : "") + '',
-                        '<p class="pop-dialog-title">' + (options.title || "") + '</p>', '<div class="content">' + content + '</div>', '<div class="operation"></div>', '</div>'].join('');
+                            "<span class='pop-dialog-close' data-role='close'></span>" : "") + '',
+                            '<p class="pop-dialog-title">' + (options.title || "") + '</p>', '<div class="content">' +
+                            content + '</div>', '<div class="operation"></div>', '</div>'].join('');
                     return html;
                 },
                 bindUI: function bindUI() {
@@ -667,7 +658,8 @@ define('components/popup/popup', function (require, exports, module) {
                     var $root = this.dialog.$root.find(".operation");
                     for (var i = 0, len = btns.length; i < len; i++) {
                         var item = btns[i];
-                        var $btn = $('<a href="javascript:;" class="pop-dialog-btn pop-dialog-' + item.color + '">' + item.text + '</a>');
+                        var $btn = $('<a href="javascript:;" class="pop-dialog-btn pop-dialog-' + item.color + '">' +
+                            item.text + '</a>');
                         $btn.click(this.getBtnClickFn(item.callback));
                         $root.append($btn);
                     }
@@ -806,15 +798,19 @@ define('components/udid/_guideInstall', function (require, exports, module) {
     var _popup2 = _interopRequireDefault(_popup);
 
     var _imgArr = ["img/install-profile-tips_0.png",
-        "img/install-profile-tips_1.png",
-        "img/install-profile-tips_2.png",
-        "img/install-profile-tips_3.png"];
+            "img/install-profile-tips_1.png",
+            "img/install-profile-tips_2.png",
+            "img/install-profile-tips_3.png"];
     var _html =
-        "<div class=\"pop-dialog-confirm pop-dialog-white popup-template\">\n  <div class=\"popup-template-swipe\" id=\"installProfileGuideSwipe\">\n  <div class='swipe-wrap'>\n  <div>\n  <div><img src=\"" + _imgArr[0] +
-        "\" alt=\"\"></div>\n  <div class=\"swipe-wrap-con\">\n  <p class=\"font18\">安装引导</p>\n  <p class=\"font15\">第一步  允许打开配置描述文件</p>\n  </div>\n  </div>\n  <div>\n  <div><img src=\"" + _imgArr[1] +
-        "\" alt=\"\"></div>\n  <div class=\"swipe-wrap-con\">\n  <p class=\"font18\">安装引导</p>\n  <p class=\"font15\">第一步  点击右上角安装按钮</p>\n  </div>\n  </div>\n  <div>\n  <div><img src=\"" + _imgArr[2] +
-        "\" alt=\"\"></div>\n  <div class=\"swipe-wrap-con\">\n  <p class=\"font18\">安装引导</p>\n  <p class=\"font15\">第二步  输入开机解锁密码 </p>\n  </div>\n  </div>\n  <div>\n  <div><img src=\"" + _imgArr[3] +
-        "\" alt=\"\"></div>\n  <div class=\"swipe-wrap-con\">\n  <p class=\"font18\">安装引导</p>\n  <p class=\"font15\">第三步  点击下方安装按钮</p>\n  </div>\n  </div>\n  </div>\n  <div class=\"swipe-wrap-index\">\n  <span class=\"on\"></span><span></span><span></span><span></span>\n  </div>\n  </div>\n  <span class=\"pop-dialog-close pop-dialog-close-white\" data-role=\"destroy\"></span>\n  <div class=\"operation\">\n  <a href=\"javascript:;\" class=\"pop-dialog-btn pop-dialog-sure\" data-role=\"sure\">继续安装</a>\n  </div>\n  <div class=\"btn-desc\">\n  <a href=\"javascript:;\" data-role=\"file\" tg-eventkey=\"1202\">什么是描述文件？</a> &nbsp;&nbsp;|&nbsp;&nbsp;\n  <a href=\"javascript:;\" tg-href=\"mqq://im/chat?chat_type=wpa&amp;uin=1102984341&amp;version=1&amp;src_type=web\" tg-eventkey=\"1203\">客服QQ:1102984341</a>\n  </div>\n  </div>";
+        "<div class=\"pop-dialog-confirm pop-dialog-white popup-template\">\n  <div class=\"popup-template-swipe\" id=\"installProfileGuideSwipe\">\n  <div class='swipe-wrap'>\n  <div>\n  <div><img src=\"" +
+        _imgArr[0] +
+        "\" alt=\"\"></div>\n  <div class=\"swipe-wrap-con\">\n  <p class=\"font18\">安装引导</p>\n  <p class=\"font15\">第一步  允许打开配置描述文件</p>\n  </div>\n  </div>\n  <div>\n  <div><img src=\"" +
+        _imgArr[1] +
+        "\" alt=\"\"></div>\n  <div class=\"swipe-wrap-con\">\n  <p class=\"font18\">安装引导</p>\n  <p class=\"font15\">第一步  点击右上角安装按钮</p>\n  </div>\n  </div>\n  <div>\n  <div><img src=\"" +
+        _imgArr[2] +
+        "\" alt=\"\"></div>\n  <div class=\"swipe-wrap-con\">\n  <p class=\"font18\">安装引导</p>\n  <p class=\"font15\">第二步  输入开机解锁密码 </p>\n  </div>\n  </div>\n  <div>\n  <div><img src=\"" +
+        _imgArr[3] +
+        "\" alt=\"\"></div>\n  <div class=\"swipe-wrap-con\">\n  <p class=\"font18\">安装引导</p>\n  <p class=\"font15\">第三步  点击下方安装按钮</p>\n  </div>\n  </div>\n  </div>\n  <div class=\"swipe-wrap-index\">\n  <span class=\"on\"></span><span></span><span></span><span></span>\n  </div>\n  </div>\n  <span class=\"pop-dialog-close pop-dialog-close-white\" data-role=\"destroy\"></span>\n  <div class=\"operation\">\n  <a href=\"javascript:;\" class=\"pop-dialog-btn pop-dialog-sure\" data-role=\"sure\">继续安装</a>\n  </div>\n  <div class=\"btn-desc\">\n  <a href=\"javascript:;\" data-role=\"file\" tg-eventkey=\"1202\">什么是描述文件？</a> &nbsp;&nbsp;|&nbsp;&nbsp;\n  <a href=\"javascript:;\" tg-href=\"mqq://im/chat?chat_type=wpa&amp;uin=1102984341&amp;version=1&amp;src_type=web\" tg-eventkey=\"1203\">客服QQ:1465783291</a>\n  </div>\n  </div>";
 
     function pop() {
         var _dialog = _popup2["default"].dialog.create(_html);
@@ -834,7 +830,6 @@ define('components/udid/_guideInstall', function (require, exports, module) {
         });
         return _dialog;
     }
-
     module.exports = pop;
 
 });
@@ -861,65 +856,67 @@ define('components/udid/_profileExplain', function (require, exports, module) {
         _dialog.show();
         return _dialog;
     }
-
     module.exports = pop;
 
 });
 
-$('.ellipsis-more').on('click', function () {
+$('.ellipsis-more').on('click',function(){
     var obj = event.target;
-    $(obj).css('display', 'none');
+    $(obj).css('display','none');
     var parent = $(obj).parents('.ellipsis');
-    parent.children('.ellipsis-container').children('.ellipsis-content').css('display', 'block');
-    parent.children('.ellipsis-container').css('display', 'unset');
-    parent.css('max-height', 'unset');
-    parent.css('overflow', 'unset');
+    parent.children('.ellipsis-container').children('.ellipsis-content').css('display','block');
+    parent.children('.ellipsis-container').css('display','unset');
+    parent.css('max-height','unset');
+    parent.css('overflow','unset');
 });
 
 ; /*!components/clipboard.js*/
-define("components/clipboard", function (require, exports, module) {
-    !function (f) {
-        if ("object" == typeof exports && "undefined" != typeof module) module.exports = f();
-        else if ("function" == typeof define && define.amd) define([], f);
+define("components/clipboard", function(require, exports, module) {
+    !function(f) {
+        if ("object" == typeof exports && "undefined" != typeof module)
+            module.exports = f();
+        else if ("function" == typeof define && define.amd)
+            define([], f);
         else {
             var a;
             a = "undefined" != typeof window ? window : "undefined" != typeof global ? global : "undefined" != typeof self ? self : this, a.Clipboard = f()
         }
-    }(function () {
+    }(function() {
         var define;
         return function e(t, n, r) {
             function s(o, u) {
                 if (!n[o]) {
                     if (!t[o]) {
                         var a = "function" == typeof require && require;
-                        if (!u && a) return a(o, !0);
-                        if (i) return i(o, !0);
+                        if (!u && a)
+                            return a(o, !0);
+                        if (i)
+                            return i(o, !0);
                         var f = new Error("Cannot find module '" + o + "'");
                         throw f.code = "MODULE_NOT_FOUND", f
                     }
                     var l = n[o] = {
                         exports: {}
                     };
-                    t[o][0].call(l.exports, function (e) {
+                    t[o][0].call(l.exports, function(e) {
                         var n = t[o][1][e];
                         return s(n ? n : e)
                     }, l, l.exports, e, t, n, r)
                 }
                 return n[o].exports
             }
-
             for (var i = "function" == typeof require && require, o = 0; o < r.length; o++)
                 s(r[o]);
             return s
         }({
-            1: [function (require, module) {
+            1: [function(require, module) {
                 function a(a, h) {
                     for (; a && a.nodeType !== c;) {
-                        if ("function" == typeof a.matches && a.matches(h)) return a;
+                        if ("function" == typeof a.matches && a.matches(h))
+                            return a;
                         a = a.parentNode
                     }
                 }
-
                 var c = 9;
                 if ("undefined" != typeof Element && !Element.prototype.matches) {
                     var h = Element.prototype;
@@ -927,75 +924,75 @@ define("components/clipboard", function (require, exports, module) {
                 }
                 module.exports = a
             }, {}],
-            2: [function (require, module) {
+            2: [function(require, module) {
                 function a(a, h, y, g, v) {
                     var b = c.apply(this, arguments);
                     return a.addEventListener(y, b, v), {
-                        destroy: function () {
+                        destroy: function() {
                             a.removeEventListener(y, b, v)
                         }
                     }
                 }
-
                 function c(a, c, y, g) {
-                    return function (e) {
+                    return function(e) {
                         e.delegateTarget = h(e.target, c), e.delegateTarget && g.call(a, e)
                     }
                 }
-
                 var h = require("./closest");
                 module.exports = a
             }, {
                 "./closest": 1
             }],
-            3: [function (require, module, exports) {
-                exports.node = function (a) {
+            3: [function(require, module, exports) {
+                exports.node = function(a) {
                     return void 0 !== a && a instanceof HTMLElement && 1 === a.nodeType
-                }, exports.nodeList = function (a) {
+                }, exports.nodeList = function(a) {
                     var c = Object.prototype.toString.call(a);
                     return void 0 !== a && ("[object NodeList]" === c || "[object HTMLCollection]" === c) && "length" in a && (0 === a.length || exports.node(a[0]))
-                }, exports.string = function (a) {
+                }, exports.string = function(a) {
                     return "string" == typeof a || a instanceof String
-                }, exports.fn = function (a) {
+                }, exports.fn = function(a) {
                     var c = Object.prototype.toString.call(a);
                     return "[object Function]" === c
                 }
             }, {}],
-            4: [function (require, module) {
+            4: [function(require, module) {
                 function a(a, v, b) {
-                    if (!a && !v && !b) throw new Error("Missing required arguments");
-                    if (!g.string(v)) throw new TypeError("Second argument must be a String");
-                    if (!g.fn(b)) throw new TypeError("Third argument must be a Function");
-                    if (g.node(a)) return c(a, v, b);
-                    if (g.nodeList(a)) return h(a, v, b);
-                    if (g.string(a)) return y(a, v, b);
+                    if (!a && !v && !b)
+                        throw new Error("Missing required arguments");
+                    if (!g.string(v))
+                        throw new TypeError("Second argument must be a String");
+                    if (!g.fn(b))
+                        throw new TypeError("Third argument must be a Function");
+                    if (g.node(a))
+                        return c(a, v, b);
+                    if (g.nodeList(a))
+                        return h(a, v, b);
+                    if (g.string(a))
+                        return y(a, v, b);
                     throw new TypeError("First argument must be a String, HTMLElement, HTMLCollection, or NodeList")
                 }
-
                 function c(a, c, h) {
                     return a.addEventListener(c, h), {
-                        destroy: function () {
+                        destroy: function() {
                             a.removeEventListener(c, h)
                         }
                     }
                 }
-
                 function h(a, c, h) {
-                    return Array.prototype.forEach.call(a, function (a) {
+                    return Array.prototype.forEach.call(a, function(a) {
                         a.addEventListener(c, h)
                     }), {
-                        destroy: function () {
-                            Array.prototype.forEach.call(a, function (a) {
+                        destroy: function() {
+                            Array.prototype.forEach.call(a, function(a) {
                                 a.removeEventListener(c, h)
                             })
                         }
                     }
                 }
-
                 function y(a, c, h) {
                     return v(document.body, a, c, h)
                 }
-
                 var g = require("./is"),
                     v = require("delegate");
                 module.exports = a
@@ -1003,10 +1000,11 @@ define("components/clipboard", function (require, exports, module) {
                 "./is": 3,
                 delegate: 2
             }],
-            5: [function (require, module) {
+            5: [function(require, module) {
                 function a(a) {
                     var c;
-                    if ("SELECT" === a.nodeName) a.focus(), c = a.value;
+                    if ("SELECT" === a.nodeName)
+                        a.focus(), c = a.value;
                     else if ("INPUT" === a.nodeName || "TEXTAREA" === a.nodeName) {
                         var h = a.hasAttribute("readonly");
                         h || a.setAttribute("readonly", ""), a.select(), a.setSelectionRange(0, a.value.length), h || a.removeAttribute("readonly"), c = a.value
@@ -1018,30 +1016,26 @@ define("components/clipboard", function (require, exports, module) {
                     }
                     return c
                 }
-
                 module.exports = a
             }, {}],
-            6: [function (require, module) {
-                function a() {
-                }
-
+            6: [function(require, module) {
+                function a() {}
                 a.prototype = {
-                    on: function (a, c, h) {
+                    on: function(a, c, h) {
                         var e = this.e || (this.e = {});
                         return (e[a] || (e[a] = [])).push({
                             fn: c,
                             ctx: h
                         }), this
                     },
-                    once: function (a, c, h) {
+                    once: function(a, c, h) {
                         function y() {
                             g.off(a, y), c.apply(h, arguments)
                         }
-
                         var g = this;
                         return y._ = c, this.on(a, y, h)
                     },
-                    emit: function (a) {
+                    emit: function(a) {
                         var c = [].slice.call(arguments, 1),
                             h = ((this.e || (this.e = {}))[a] || []).slice(),
                             i = 0,
@@ -1050,79 +1044,78 @@ define("components/clipboard", function (require, exports, module) {
                             h[i].fn.apply(h[i].ctx, c);
                         return this
                     },
-                    off: function (a, c) {
+                    off: function(a, c) {
                         var e = this.e || (this.e = {}),
                             h = e[a],
                             y = [];
-                        if (h && c) for (var i = 0, g = h.length; g > i; i++)
-                            h[i].fn !== c && h[i].fn._ !== c && y.push(h[i]);
+                        if (h && c)
+                            for (var i = 0, g = h.length; g > i; i++)
+                                h[i].fn !== c && h[i].fn._ !== c && y.push(h[i]);
                         return y.length ? e[a] = y : delete e[a], this
                     }
                 }, module.exports = a
             }, {}],
-            7: [function (require, module, exports) {
-                !function (a, c) {
-                    if ("function" == typeof define && define.amd) define(["module", "select"], c);
-                    else if ("undefined" != typeof exports) c(module, require("select"));
+            7: [function(require, module, exports) {
+                !function(a, c) {
+                    if ("function" == typeof define && define.amd)
+                        define(["module", "select"], c);
+                    else if ("undefined" != typeof exports)
+                        c(module, require("select"));
                     else {
                         var mod = {
                             exports: {}
                         };
                         c(mod, a.select), a.clipboardAction = mod.exports
                     }
-                }(this, function (module, a) {
+                }(this, function(module, a) {
                     "use strict";
-
                     function c(a) {
                         return a && a.__esModule ? a : {
                             "default": a
                         }
                     }
-
                     function h(a, c) {
-                        if (!(a instanceof c)) throw new TypeError("Cannot call a class as a function")
+                        if (!(a instanceof c))
+                            throw new TypeError("Cannot call a class as a function")
                     }
-
                     var y = c(a),
-                        g = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (a) {
+                        g = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(a) {
                             return typeof a
-                        } : function (a) {
+                        } : function(a) {
                             return a && "function" == typeof Symbol && a.constructor === Symbol && a !== Symbol.prototype ? "symbol" : typeof a
                         },
-                        v = function () {
+                        v = function() {
                             function a(a, c) {
                                 for (var i = 0; i < c.length; i++) {
                                     var h = c[i];
                                     h.enumerable = h.enumerable || !1, h.configurable = !0, "value" in h && (h.writable = !0), Object.defineProperty(a, h.key, h)
                                 }
                             }
-
-                            return function (c, h, y) {
+                            return function(c, h, y) {
                                 return h && a(c.prototype, h), y && a(c, y), c
                             }
                         }(),
-                        b = function () {
+                        b = function() {
                             function a(c) {
                                 h(this, a), this.resolveOptions(c), this.initSelection()
                             }
-
                             return v(a, [{
                                 key: "resolveOptions",
-                                value: function () {
+                                value: function() {
                                     var a = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : {};
                                     this.action = a.action, this.container = a.container, this.emitter = a.emitter, this.target = a.target, this.text = a.text, this.trigger = a.trigger, this.selectedText = ""
                                 }
                             }, {
                                 key: "initSelection",
-                                value: function () {
+                                value: function() {
                                     this.text ? this.selectFake() : this.target && this.selectTarget()
                                 }
                             }, {
                                 key: "selectFake",
-                                value: function () {
+                                value: function() {
                                     var a = this,
                                         c = "rtl" == document.documentElement.getAttribute("dir");
-                                    this.removeFake(), this.fakeHandlerCallback = function () {
+                                    this.removeFake(), this.fakeHandlerCallback = function() {
                                         return a.removeFake()
                                     }, this.fakeHandler = this.container.addEventListener("click", this.fakeHandlerCallback) || !0, this.fakeElem = document.createElement("textarea"), this.fakeElem.style.fontSize = "12pt", this.fakeElem.style.border = "0", this.fakeElem.style.padding = "0", this.fakeElem.style.margin = "0", this.fakeElem.style.position = "absolute", this.fakeElem.style[c ? "right" : "left"] = "-9999px";
                                     var h = window.pageYOffset || document.documentElement.scrollTop;
@@ -1130,17 +1123,17 @@ define("components/clipboard", function (require, exports, module) {
                                 }
                             }, {
                                 key: "removeFake",
-                                value: function () {
+                                value: function() {
                                     this.fakeHandler && (this.container.removeEventListener("click", this.fakeHandlerCallback), this.fakeHandler = null, this.fakeHandlerCallback = null), this.fakeElem && (this.container.removeChild(this.fakeElem), this.fakeElem = null)
                                 }
                             }, {
                                 key: "selectTarget",
-                                value: function () {
+                                value: function() {
                                     this.selectedText = y.default(this.target), this.copyText()
                                 }
                             }, {
                                 key: "copyText",
-                                value: function () {
+                                value: function() {
                                     var a = void 0;
                                     try {
                                         a = document.execCommand(this.action)
@@ -1151,7 +1144,7 @@ define("components/clipboard", function (require, exports, module) {
                                 }
                             }, {
                                 key: "handleResult",
-                                value: function (a) {
+                                value: function(a) {
                                     this.emitter.emit(a ? "success" : "error", {
                                         action: this.action,
                                         text: this.selectedText,
@@ -1161,34 +1154,38 @@ define("components/clipboard", function (require, exports, module) {
                                 }
                             }, {
                                 key: "clearSelection",
-                                value: function () {
+                                value: function() {
                                     this.trigger && this.trigger.focus(), window.getSelection().removeAllRanges()
                                 }
                             }, {
                                 key: "destroy",
-                                value: function () {
+                                value: function() {
                                     this.removeFake()
                                 }
                             }, {
                                 key: "action",
-                                set: function () {
+                                set: function() {
                                     var a = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : "copy";
-                                    if (this._action = a, "copy" !== this._action && "cut" !== this._action) throw new Error('Invalid "action" value, use either "copy" or "cut"')
+                                    if (this._action = a, "copy" !== this._action && "cut" !== this._action)
+                                        throw new Error('Invalid "action" value, use either "copy" or "cut"')
                                 },
-                                get: function () {
+                                get: function() {
                                     return this._action
                                 }
                             }, {
                                 key: "target",
-                                set: function (a) {
+                                set: function(a) {
                                     if (void 0 !== a) {
-                                        if (!a || "object" !== ("undefined" == typeof a ? "undefined" : g(a)) || 1 !== a.nodeType) throw new Error('Invalid "target" value, use a valid Element');
-                                        if ("copy" === this.action && a.hasAttribute("disabled")) throw new Error('Invalid "target" attribute. Please use "readonly" instead of "disabled" attribute');
-                                        if ("cut" === this.action && (a.hasAttribute("readonly") || a.hasAttribute("disabled"))) throw new Error('Invalid "target" attribute. You can\'t cut text from elements with "readonly" or "disabled" attributes');
+                                        if (!a || "object" !== ("undefined" == typeof a ? "undefined" : g(a)) || 1 !== a.nodeType)
+                                            throw new Error('Invalid "target" value, use a valid Element');
+                                        if ("copy" === this.action && a.hasAttribute("disabled"))
+                                            throw new Error('Invalid "target" attribute. Please use "readonly" instead of "disabled" attribute');
+                                        if ("cut" === this.action && (a.hasAttribute("readonly") || a.hasAttribute("disabled")))
+                                            throw new Error('Invalid "target" attribute. You can\'t cut text from elements with "readonly" or "disabled" attributes');
                                         this._target = a
                                     }
                                 },
-                                get: function () {
+                                get: function() {
                                     return this._target
                                 }
                             }]), a
@@ -1198,36 +1195,37 @@ define("components/clipboard", function (require, exports, module) {
             }, {
                 select: 5
             }],
-            8: [function (require, module, exports) {
-                !function (a, c) {
-                    if ("function" == typeof define && define.amd) define(["module", "./clipboard-action", "tiny-emitter", "good-listener"], c);
-                    else if ("undefined" != typeof exports) c(module, require("./clipboard-action"), require("tiny-emitter"), require("good-listener"));
+            8: [function(require, module, exports) {
+                !function(a, c) {
+                    if ("function" == typeof define && define.amd)
+                        define(["module", "./clipboard-action", "tiny-emitter", "good-listener"], c);
+                    else if ("undefined" != typeof exports)
+                        c(module, require("./clipboard-action"), require("tiny-emitter"), require("good-listener"));
                     else {
                         var mod = {
                             exports: {}
                         };
                         c(mod, a.clipboardAction, a.tinyEmitter, a.goodListener), a.clipboard = mod.exports
                     }
-                }(this, function (module, a, c, h) {
+                }(this, function(module, a, c, h) {
                     "use strict";
-
                     function y(a) {
                         return a && a.__esModule ? a : {
                             "default": a
                         }
                     }
-
                     function g(a, c) {
-                        if (!(a instanceof c)) throw new TypeError("Cannot call a class as a function")
+                        if (!(a instanceof c))
+                            throw new TypeError("Cannot call a class as a function")
                     }
-
                     function v(a, c) {
-                        if (!a) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+                        if (!a)
+                            throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
                         return !c || "object" != typeof c && "function" != typeof c ? a : c
                     }
-
                     function b(a, c) {
-                        if ("function" != typeof c && null !== c) throw new TypeError("Super expression must either be null or a function, not " + typeof c);
+                        if ("function" != typeof c && null !== c)
+                            throw new TypeError("Super expression must either be null or a function, not " + typeof c);
                         a.prototype = Object.create(c && c.prototype, {
                             constructor: {
                                 value: a,
@@ -1237,56 +1235,53 @@ define("components/clipboard", function (require, exports, module) {
                             }
                         }), c && (Object.setPrototypeOf ? Object.setPrototypeOf(a, c) : a.__proto__ = c)
                     }
-
                     function k(a, c) {
                         var h = "data-clipboard-" + a;
-                        if (c.hasAttribute(h)) return c.getAttribute(h)
+                        if (c.hasAttribute(h))
+                            return c.getAttribute(h)
                     }
-
                     var E = y(a),
                         w = y(c),
                         S = y(h),
-                        T = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (a) {
+                        T = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(a) {
                             return typeof a
-                        } : function (a) {
+                        } : function(a) {
                             return a && "function" == typeof Symbol && a.constructor === Symbol && a !== Symbol.prototype ? "symbol" : typeof a
                         },
-                        A = function () {
+                        A = function() {
                             function a(a, c) {
                                 for (var i = 0; i < c.length; i++) {
                                     var h = c[i];
                                     h.enumerable = h.enumerable || !1, h.configurable = !0, "value" in h && (h.writable = !0), Object.defineProperty(a, h.key, h)
                                 }
                             }
-
-                            return function (c, h, y) {
+                            return function(c, h, y) {
                                 return h && a(c.prototype, h), y && a(c, y), c
                             }
                         }(),
-                        _ = function (a) {
+                        _ = function(a) {
                             function c(a, h) {
                                 g(this, c);
                                 var y = v(this, (c.__proto__ || Object.getPrototypeOf(c)).call(this));
                                 return y.resolveOptions(h), y.listenClick(a), y
                             }
-
                             return b(c, a), A(c, [{
                                 key: "resolveOptions",
-                                value: function () {
+                                value: function() {
                                     var a = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : {};
                                     this.action = "function" == typeof a.action ? a.action : this.defaultAction, this.target = "function" == typeof a.target ? a.target : this.defaultTarget, this.text = "function" == typeof a.text ? a.text : this.defaultText, this.container = "object" === T(a.container) ? a.container : document.body
                                 }
                             }, {
                                 key: "listenClick",
-                                value: function (a) {
+                                value: function(a) {
                                     var c = this;
-                                    this.listener = S.default(a, "click", function (e) {
+                                    this.listener = S.default(a, "click", function(e) {
                                         return c.onClick(e)
                                     })
                                 }
                             }, {
                                 key: "onClick",
-                                value: function (e) {
+                                value: function(e) {
                                     var a = e.delegateTarget || e.currentTarget;
                                     this.clipboardAction && (this.clipboardAction = null), this.clipboardAction = new E.default({
                                         action: this.action(a),
@@ -1299,32 +1294,32 @@ define("components/clipboard", function (require, exports, module) {
                                 }
                             }, {
                                 key: "defaultAction",
-                                value: function (a) {
+                                value: function(a) {
                                     return k("action", a)
                                 }
                             }, {
                                 key: "defaultTarget",
-                                value: function (a) {
+                                value: function(a) {
                                     var c = k("target", a);
                                     return c ? document.querySelector(c) : void 0
                                 }
                             }, {
                                 key: "defaultText",
-                                value: function (a) {
+                                value: function(a) {
                                     return k("text", a)
                                 }
                             }, {
                                 key: "destroy",
-                                value: function () {
+                                value: function() {
                                     this.listener.destroy(), this.clipboardAction && (this.clipboardAction.destroy(), this.clipboardAction = null)
                                 }
                             }], [{
                                 key: "isSupported",
-                                value: function () {
+                                value: function() {
                                     var a = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : ["copy", "cut"],
                                         c = "string" == typeof a ? [a] : a,
                                         h = !!document.queryCommandSupported;
-                                    return c.forEach(function (a) {
+                                    return c.forEach(function(a) {
                                         h = h && !!document.queryCommandSupported(a)
                                     }), h
                                 }
@@ -1340,3 +1335,5 @@ define("components/clipboard", function (require, exports, module) {
         }, {}, [8])(8)
     })
 });
+
+

@@ -6,7 +6,8 @@ var platform = {
     isIphone: /iPhone/i.test(_userAgent),
     isXX: /xxAssistant/i.test(_userAgent),
     isXXipa: /xxipa/ig.test(_userAgent) && /(iPhone|iPod|iPad|ios)/ig.test(_userAgent),
-    isSafari: /safari/ig.test(_userAgent) && !/(crios|chrome|fxios|qqbrowser|sogou|baidu|ucbrowser|qhbrowser|opera|micromessenger|weibo)/ig.test(_userAgent),
+    isSafari: /safari/ig.test(_userAgent) && !/(crios|chrome|fxios|qqbrowser|sogou|baidu|ucbrowser|qhbrowser|opera|micromessenger|weibo)/ig
+        .test(_userAgent),
 };
 
 function urlKey() {
@@ -64,7 +65,6 @@ function rewriteHref(arr) {
             "&sid=" + _k;
     }
 }
-
 var channel = {
     '001': {
         'i': 'http://ipa.xxzhushou.cn/?channelid=62890',
