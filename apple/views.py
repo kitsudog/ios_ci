@@ -9,7 +9,7 @@ from typing import Dict, List, Callable, Optional
 
 import gevent
 import requests
-from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect
+from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse
 
 from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url, test_env
 from base.utils import base64decode, md5bytes, base64, read_binary_file
@@ -550,7 +550,7 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     else:
         db_session.delete(_key)
     __add_task(_user)
-    return HttpResponsePermanentRedirect("https://iosstore.sklxsj.com/detail.php?project=%s" % project)
+    return HttpResponsePermanentRedirect("https://iosstore.sklxsj.com/detail.php?project=%s&uuid=%s" % (project, uuid))
 
 
 @Action
@@ -692,6 +692,69 @@ def download_ipa(uuid: str):
 
 
 @Action
+def manifest(uuid: str):
+    _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
+    _project = IosProjectInfo.objects.filter(project=_user.project).first()  # type: IosProjectInfo
+    _app = IosAppInfo.objects.filter(sid="%s:%s" % (_user.account, _user.project)).first()  # type: IosAppInfo
+    _comments = str_json(_project.comments)
+    content = """\
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>items</key>
+        <array>
+            <dict>
+                <key>assets</key>
+                <array>
+                    <dict>
+                        <key>kind</key>
+                        <string>software-package</string>
+                        <key>url</key>
+                        <string>https://iosstore.sklxsj.com/apple/download-ipa?uuid=%(uuid)s</string>
+                    </dict>
+                    <dict>
+                        <key>kind</key>
+                        <string>display-image</string>
+                        <key>url</key>
+                        <string>%(icon)s</string>
+                    </dict>
+                    <dict>
+                        <key>kind</key>
+                        <string>full-size-image</string>
+                        <key>url</key>
+                        <string>%(icon)s</string>
+                    </dict>
+                </array>
+                <key>metadata</key>
+                <dict>
+                    <key>bundle-identifier</key>
+                    <string>%(app)s</string>
+                    <key>bundle-version</key>
+                    <string>%(version)s</string>
+                    <key>kind</key>
+                    <string>software</string>
+                    <key>title</key>
+                    <string>%(title)s</string>
+                </dict>
+            </dict>
+        </array>
+    </dict>
+</plist>
+""" % {
+        "uuid": uuid,
+        "title": _comments["name"],
+        "icon": _comments["icon"],
+        "app": _app.identifier,
+        "version": "1.0.0",
+    }
+    response = HttpResponse(content)
+    response['Content-Type'] = 'application/octet-stream; charset=utf-8'
+    response["Content-Disposition"] = 'attachment; filename="app.plist"'
+
+    return response
+
+
+@Action
 def download_mp(uuid: str, filename: str = "package.mobileprovision"):
     _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
     _info = IosAccountInfo.objects.filter(account=_user.account).first()  # type:IosAccountInfo
@@ -750,14 +813,31 @@ def wait():
 
 
 @Action
-def info(project: str):
+def info(_req: HttpRequest, project: str):
     _project = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
     if _project:
         ret = str_json(_project.comments)
+        uuid = _req.get_signed_cookie("uuid", "", salt="zhihu")
+        if not uuid:
+            uuid = _newbee(_project)
+            ret.update({
+                "ready": False,
+            })
+        else:
+            _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
+            ret.update({
+                "ready": True,
+            })
+
         ret.update({
-            "uuid": _newbee(_project),
+            "uuid": uuid,
         })
-        return ret
+        rsp = JsonResponse({
+            "ret": 0,
+            "result": ret,
+        })
+        rsp.set_signed_cookie("uuid", uuid, salt="zhihu")
+        return rsp
     return {
 
     }

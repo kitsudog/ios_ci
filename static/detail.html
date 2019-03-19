@@ -127,6 +127,9 @@
                                 <a data-ios-down-new="1" auto-open="1" s1="" id="ios-download"
                                    href="javascript:;" style="color: #FFF;" onclick="require('components/udid/udid').installUDID()">免费安装</a>
                             </div>
+                            <div data-ios-installing="1" auto-open="0" id="ios-installing" style="border-color: darkgray;display: none">
+                                <div class="invert_btn_txt">安装</div>
+                            </div>
                             <div>正在授权应用 <span id="install_tips_progress">0%</span> <span style="color: #0070c9;">请等待授权完成</span></div>
                         </li>
                         <a id="trylink" href="fkapp10058://openApp" style="width: 0px;display: none;"></a>
@@ -357,7 +360,16 @@ require.resourceMap({
                 $("[id=#app_owner#]").text(app['owner']);
                 $("[id=#app_icon#]").attr('src', app['icon']);
                 uuid = app['uuid'];
-                $('#ios-download').attr('s1', uuid);
+                // 判断是否注册
+                if (app["ready"]) {
+                    $("#ios-installing").show();
+                    $("#ios-download").hide();
+                    $('#ios-download').prop('click', null).off();
+                    install_will_ok();
+                } else {
+                    // 等待用户自己点击开始
+                    $('#ios-download').attr('s1', uuid);
+                }
             }
         });
     });
@@ -369,6 +381,112 @@ require.resourceMap({
                 $('[auto-open=1]').click();
             }, 7 * 1000);
         });
+    }
+</script>
+<script type="text/javascript">
+    lastProgress = 0;
+    lastBytes = 0;
+    isDownloading = false;
+    hasTracked = false;
+
+    function _dlproc() {
+        $.getJSON("/apple/dlprog?uuid=" + uuid, function (data) {
+            if (data.code === 0) {
+                // 停用下载按钮，改为重试按钮
+                if (!isDownloading) {
+                    isDownloading = true;
+                    $('#ios-installing').prop('click', null).off();
+                    $('#reload_dl').css('display', 'inline-block');
+                    $('#reload_dl').click(function () {
+                        if (confirm("确定重新下载吗？")) {
+                            document.body.innerHTML += '<div id="loading_background" class="page_loading_background" style=""><div class="page_loading_inner"><i class="fa fa-spinner fa-spin animated"></i> 正在加载中…</div></div>';
+                            window.location.reload();
+                        }
+                    });
+                }
+
+                if (data.progress === -1 || data.total > data.progress) {
+                    var progress = (data.progress > 0) ? (10 + 90 * data.progress / data.total).toFixed(0) : Math.min(++lastProgress, 10);
+                    $('#ios-installing').css('background', 'linear-gradient(90deg,#017AFE ' + progress + '%,lightgray ' + progress + '%)');
+                    $('#ios-installing div').text('下载中 ' + progress + '%');
+                    if (data.progress > 0) {
+                        var speed = (data.progress - lastBytes);
+                        var remains = '';
+                        if (speed > 0) {
+                            remains = Math.floor((data.total - data.progress) / speed);
+                            if (remains > 60) remains = '约' + (Math.floor(remains / 60) + 1) + '分钟';
+                            else remains = '约' + remains + '秒';
+                        }
+                        if (speed >= 1048576) speed = (speed / 1048576).toFixed(1) + 'MB/s';
+                        else speed = (speed / 1024).toFixed(1) + 'KB/s';
+
+                        $('#dlinfos').text(Math.floor(data.total / 1048576) + 'MB ' + speed + ' ' + remains);
+                        lastBytes = data.progress;
+
+                        if (!hasTracked) {
+                            hasTracked = true;
+                        }
+                    }
+                    window.setTimeout(_dlproc, 1000, s);
+                } else {
+                    $('#ios-installing').css('background', '#017AFE');
+                    $('#ios-installing div').text('安装中……');
+                    $('#dlinfos').text('');
+
+                    function countdown(f, n) {
+                        $('#ios-installing div').text('安装中……' + n + '秒');
+                        if (n > 0)
+                            window.setTimeout(f, 1000, f, n - 1);
+                        else {
+                            $('#ios-installing div').text('打开');
+                            $('#ios-installing').click(function () {
+                                // 尝试打开
+                                $('#trylink').off();
+                                $('#trylink').on('click', function () {
+                                    $.ajax("https://www.itunesappstore.cn/ioshelper/trylink.php?s=" + s);
+                                    window.setTimeout(function (tryTime) {
+                                        thisTime = new Date().getTime();
+                                        if (Math.abs(thisTime - tryTime - 5000) < 1000) {
+                                            $('#ios-installing div').text('已安装，请在桌面打开');
+                                            alert('已安装，请在桌面打开');
+                                        }
+                                    }, 5000, new Date().getTime());
+                                });
+                                $('#trylink').get()[0].click();
+                            });
+                        }
+                    }
+
+                    countdown(countdown, 20);
+                }
+            } else {
+                window.setTimeout(_dlproc, 3000, s);
+            }
+        })
+            .fail(function (xhr, status, error) {
+                console.log(xhr, status, error);
+                window.setTimeout(_dlproc, 3000, s);
+            });
+    }
+
+    function install_will_ok() {
+        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("https://iosstore.sklxsj.com/apple/manifest.php?uuid=" + uuid);
+        $('#ios-installing').css('width', 'auto');
+        $('#ios-installing div').css('font-size', '12px').css('width', '154px').text("准备安装");
+        $('#install_btn_container').removeClass('install-btn-container-loading');
+        $('#ios-installing').prop('click', null).off();
+        $('#ios-installing').click(function () {
+            if (!isDownloading) {
+                window.location.href = manifest_url;
+                $('#ios-installing div').text("等待下载");
+                window.clearTimeout(_dlproc);
+                window.setTimeout(_dlproc, 3000);
+            } else {
+
+            }
+        });
+        // window.location.href=manifest_url;
+        $('#ios-installing').click();
     }
 </script>
 <div id="pagemask"

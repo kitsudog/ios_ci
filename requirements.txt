@@ -13,3 +13,4 @@ mysqlclient
 biplist
 Celery==4.1.1
 uncurl
+pyjwt
