@@ -33,6 +33,10 @@ mkdir -p /data/projects
 ln -s /data/income /app/server/static/income
 ln -s /data/projects /app/server/static/projects
 
+ln -s /data/income /var/www/html
+ln -s /data/projects /var/www/html
+
+
 if [[ ${UWSGI:-FALSE} = "TRUE" || ${VIRTUAL_PROTO:-http} = "uwsgi" ]]
 then
     uwsgi --socket :8000 --gevent --gevent-monkey-patch --module ios_ci.wsgi  --async 100 --http-keepalive --chmod-socket=664

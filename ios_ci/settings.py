@@ -52,6 +52,7 @@ SECRET_KEY = 'wv2(!kf*fhkuv6dxn^1c9=g-ef_8$&(17^*g=26g(t7_lmebby'
 DEBUG = bool(os.environ.get("DEBUG", False))
 
 
+
 def _valid_host(src: str):
     ret = []
     for each in src.split(","):

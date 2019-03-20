@@ -66,9 +66,11 @@ def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str,
     return cert_req_id
 
 
-def _reg_device(device_id: str, udid: str, model: str, sn: str) -> str:
+def _reg_device(account: str, device_id: str, udid: str, model: str, sn: str) -> str:
     # 需要缓存
     _info = IosDeviceInfo()
+    _info.sid = "%s:%s" % (account, udid)
+    _info.account = account
     _info.udid = udid
     _info.device_id = device_id
     _info.model = model
@@ -76,6 +78,13 @@ def _reg_device(device_id: str, udid: str, model: str, sn: str) -> str:
     _info.create = now()
     _info.save()
     Log("注册新的设备[%s][%s][%s]" % (udid, device_id, sn))
+    _account = IosAccountInfo.objects.get(account=account)
+    device_map = str_json(_account.devices)
+    device_map[udid] = device_id
+    if json_str(device_map) != _account.devices:
+        _account.devices = json_str(device_map)
+        _account.devices_num = len(device_map)
+        _account.save()
     return udid
 
 
@@ -143,16 +152,6 @@ def _get_app(_config: IosAccountHelper, project: str) -> IosAppInfo:
     return Assert(app, "账号[%s]缺少app[%s]" % (_config.account, project))
 
 
-def _get_device_id(udid_list: List[str]) -> Dict[str, str]:
-    return dict(
-        zip(udid_list,
-            map(lambda x: str_json(x)["device_id"] if x else x,
-                db_model.mget(list(map(lambda x: "IosDeviceInfo:%s" % x, udid_list)))
-                )
-            )
-    )
-
-
 def __list_all_app(_config: IosAccountHelper, project: str):
     ret = _config.post(
         "所有的app",
@@ -164,9 +163,14 @@ def __list_all_app(_config: IosAccountHelper, project: str):
             "onlyCountLists": True,
         })
     for app in ret["appIds"]:  # type: Dict
-        if app["name"] != "ci%s" % project:
+        if not app["name"].startswith("ci"):
             continue
-        _reg_app(_config.info, project, app["appIdId"], app["name"], app["prefix"], app["identifier"])
+        if project:
+            if app["name"] != "ci%s" % project:
+                continue
+            _reg_app(_config.info, project, app["appIdId"], app["name"], app["prefix"], app["identifier"])
+        else:
+            _reg_app(_config.info, app["name"][2:], app["appIdId"], app["name"], app["prefix"], app["identifier"])
 
 
 def _to_ts(date_str: str):
@@ -359,13 +363,13 @@ def __list_all_devices(_config: IosAccountHelper):
             "sort": "status%3dasc",
             "teamId": _config.team_id,
         }, log=False)
-    for device in ret["devices"]:  # type: Dict
-        _reg_device(device["deviceId"],
+    for device in set(map(lambda x: x["deviceId"], ret["devices"])) - set(str_json(_config.info.devices).values()):  # type: Dict
+        _reg_device(_config.account, device["deviceId"],
                     device["deviceNumber"],
                     device.get("model", device.get("deviceClass", "#UNKNOWN#")),
                     device.get("serialNumber", "#UNKNOWN#"))
     # 更新一下info
-    devices = list(map(lambda x: x["deviceNumber"], ret["devices"]))
+    devices = dict(map(lambda x: (x["deviceNumber"], x["deviceId"]), ret["devices"]))
     if json_str(devices) != _config.info.devices:
         Log("更新设备列表[%s]数量[%s]=>[%s]" % (_config.account, _config.info.devices_num, len(devices)))
         _config.info.devices = json_str(devices)
@@ -520,9 +524,9 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     _key = "uuid:%s" % uuid
     _detail = str_json(db_session.get(_key) or "{}")
     _account = _detail.get("account")
-    project = _detail["project"]
     if not _detail:
         raise Fail("无效的uuid[%s]" % uuid)
+    project = _detail["project"]
     if not udid:
         # todo: 验证来源
         with Block("提取udid", fail=False):
@@ -679,9 +683,10 @@ def upload_project_ipa(project: str, file: bytes):
     os.makedirs(base, exist_ok=True)
     with open(os.path.join(base, "orig.ipa"), mode="wb") as fout:
         fout.write(file)
-    _info.md5sum = md5bytes(file)
-    _info.save()
-    Log("更新工程[%s]的ipa[%s]" % (project, _info.md5sum))
+    if _info.md5sum != md5bytes(file):
+        _info.md5sum = md5bytes(file)
+        _info.save()
+        Log("更新工程[%s]的ipa[%s]" % (project, _info.md5sum))
     # todo: 激活更新一下
     return {
         "succ": True,
@@ -745,7 +750,7 @@ def manifest(uuid: str):
                         <key>kind</key>
                         <string>software-package</string>
                         <key>url</key>
-                        <string>https://static_iosstore.sklxsj.com/income/%(project)s/%(filename)s</string>
+                        <string>https://static_iosstore.sklxsj.com/%(project)s/%(filename)s</string>
                     </dict>
                     <dict>
                         <key>kind</key>
@@ -968,9 +973,9 @@ def download_process(uuid: str):
 if ide_debug():
     # noinspection PyProtectedMember
     def _debug():
-        Log("初始化一个测试项目")
         _info, created = IosProjectInfo.objects.get_or_create(sid="test", project="test")
         if created:
+            Log("初始化一个测试项目")
             _info.bundle_prefix = "com.test"
             _info.save()
         upload_project_ipa._orig_func("test", read_binary_file("projects/test.ipa"))

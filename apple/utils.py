@@ -161,7 +161,7 @@ class IosAccountHelper:
             if csrf:
                 headers.update({
                     'csrf': self.csrf,
-                    'csrf_ts': self.csrf_ts,
+                    'csrf_ts': str(self.csrf_ts),
                 })
             if ex_headers:
                 headers.update(ex_headers)

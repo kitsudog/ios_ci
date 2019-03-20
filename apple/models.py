@@ -24,7 +24,7 @@ class IosAccountInfo(models.Model):
     headers = models.CharField(max_length=1024, default="{}")
     csrf = models.CharField(max_length=128)
     csrf_ts = models.BigIntegerField(default=0)
-    devices = models.TextField("当前设备", default="[]")
+    devices = models.TextField("当前设备", default="{}")
     devices_num = models.IntegerField("设备数", default=0)
     phone = models.CharField("绑定手机", max_length=128, default="", help_text="二次验证用的")
 
@@ -38,8 +38,10 @@ class IosDeviceInfo(models.Model):
         db_table = "ios_device_info"
         verbose_name_plural = '设备'
 
-    udid = models.CharField("设备udid", max_length=128, primary_key=True, db_column="udid", blank=False)
-    device_id = models.CharField("设备id", max_length=128, db_index=True)
+    sid = models.CharField(max_length=128, primary_key=True, db_column="sid", blank=False)
+    udid = models.CharField("设备udid", max_length=128, db_index=True, blank=False)
+    account = models.CharField("所属账号", max_length=128, db_index=True, blank=False)
+    device_id = models.CharField("设备id", max_length=128)
     model = models.CharField("机型", max_length=128)
     sn = models.CharField(max_length=128)
     create = models.DateTimeField("登记时间", auto_now=True)
