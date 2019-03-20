@@ -12,10 +12,10 @@ import requests
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse
 
 from apple.tasks import resign_ipa
-from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url, test_env, ide_debug
+from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, test_env, ide_debug
 from base.utils import base64decode, md5bytes, base64, read_binary_file
 from frameworks.base import Action
-from frameworks.db import db_model, db_session, message_from_topic
+from frameworks.db import db_session, message_from_topic
 from helper.name_generator import GetRandomName
 from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo, TaskInfo
 from .utils import IosAccountHelper, publish_security_code, curl_parse_context, entry, get_capability
@@ -37,20 +37,6 @@ def _reg_app(_config: IosAccountInfo, project: str, app_id_id: str, name: str, p
 
 def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str, expire):
     sid = "%s:%s" % (_config.account, name)
-    orig = str_json(db_model.get("IosCertInfo:%s:%s" % (_config.account, name)) or '{}')
-    obj = {
-        "name": name,
-        "app": _config.account,
-        "cert_req_id": cert_req_id,
-        "cert_id": cert_id,
-        "sn": sn,
-        "type_str": type_str,
-        "expire": expire,
-        "expire_str": date_time_str(expire),
-    }
-    if orig == obj:
-        return cert_req_id
-    db_model.set("IosCertInfo:%s:%s" % (_config.account, name), json_str(obj), ex=(expire - now()) // 1000)
     _info = IosCertInfo()
     _info.sid = sid
     _info.app = _config.account
@@ -438,7 +424,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                 devices.append(udid)
                 with Block("默认全开当期的设备"):
                     # noinspection PyTypeChecker
-                    devices = list(set(devices + str_json(_config.info.devices)))
+                    devices = list(set(devices + list(str_json(_config.info.devices).keys())))
                 _cert = _get_cert(_config.info)
                 _app = _get_app(_config, project)
                 found = False
@@ -457,7 +443,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                             "provisioningProfileName": each["name"],
                             "appIdId": _app.app_id_id,
                             "certificateIds": _cert.cert_req_id,
-                            "deviceIds": ",".join(map(lambda x: _config.info.devices[x], devices)),
+                            "deviceIds": ",".join(map(lambda x: str_json(_config.info.devices)[x], devices)),
                         }, csrf=True)
                     Assert(ret["resultCode"] == 0)
                     _info.devices = json_str(devices)
@@ -476,7 +462,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                         data={
                             "subPlatform": "",
                             "certificateIds": _cert.cert_req_id,
-                            "deviceIds": ",".join(map(lambda x: _config.info.devices[x], devices)),
+                            "deviceIds": ",".join(map(lambda x: str_json(_config.info.devices)[x], devices)),
                             "template": "",
                             "returnFullObjects": False,
                             "distributionTypeLabel": "distributionTypeLabel",
