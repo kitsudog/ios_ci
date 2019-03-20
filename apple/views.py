@@ -363,7 +363,8 @@ def __list_all_devices(_config: IosAccountHelper):
             "sort": "status%3dasc",
             "teamId": _config.team_id,
         }, log=False)
-    for device in set(map(lambda x: x["deviceId"], ret["devices"])) - set(str_json(_config.info.devices).values()):  # type: Dict
+    for device_id in set(map(lambda x: x["deviceId"], ret["devices"])) - set(str_json(_config.info.devices).values()):  # type: Dict
+        device = list(filter(lambda x: x["deviceId"] == device_id, ret["devices"]))[0]
         _reg_device(_config.account, device["deviceId"],
                     device["deviceNumber"],
                     device.get("model", device.get("deviceClass", "#UNKNOWN#")),
