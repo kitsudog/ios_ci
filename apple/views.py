@@ -511,7 +511,7 @@ def __add_task(_user: UserInfo):
         "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
         "mp_md5": md5bytes(base64decode(_profile.profile)),
         "project": _project.project,
-        "ipa_url": _asset_url("%s/orig.ipa" % _user.project),
+        "ipa_url": entry("/projects/%s/orig.ipa" % _user.project),
         "ipa_md5": _project.md5sum,
         "ipa_new": "%s_%s.ipa" % (_account.team_id, _account.devices_num),
         "upload_url": entry("/apple/upload_ipa?uuid=%s" % _user.uuid),
@@ -680,7 +680,7 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
 @Action
 def upload_project_ipa(project: str, file: bytes):
     _info = IosProjectInfo.objects.get(project=project)
-    base = os.path.join("static/packages", project)
+    base = os.path.join("static/projects", project)
     os.makedirs(base, exist_ok=True)
     with open(os.path.join(base, "orig.ipa"), mode="wb") as fout:
         fout.write(file)
