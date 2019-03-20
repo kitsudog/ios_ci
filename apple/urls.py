@@ -1,7 +1,7 @@
 from django.conf.urls import url
 
 from .views import add_device, download_profile, newbee, security_code, login_by_curl, init_account, upload_ipa, download_mp, mobconf, \
-    info, login_by_fastlane, security_code_sms, wait, task_state, rebuild, upload_project_ipa, manifest, download_process
+    info, login_by_fastlane, security_code_sms, wait, task_state, rebuild, upload_project_ipa, manifest, download_process, download_ipa
 
 urlpatterns = [
     url(r'init_account', init_account),
@@ -22,4 +22,5 @@ urlpatterns = [
     url(r'download_process', download_process),
     url(r'upload_project_ipa', upload_project_ipa),
     url(r'manifest', manifest),
+    url(r'download_ipa', download_ipa)
 ]
