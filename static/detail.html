@@ -270,7 +270,7 @@
         <dl class="ios-app-infor-list">
             <div class="ios-app-infor-list_row row-bottom-border">
                 <dt class="ios-app-infor-list_row_term">销售商</dt>
-                <dd class="ios-app-infor-list_row_val">陌趣</dd>
+                <dd class="ios-app-infor-list_row_val"><span id="#app_owner#"></span></dd>
             </div>
             <div class="ios-app-infor-list_row row-bottom-border">
                 <dt class="ios-app-infor-list_row_term">大小</dt>
@@ -396,7 +396,7 @@ require.resourceMap({
                 // 判断是否注册
                 if (app["ready"]) {
                     $("#ios-installing").show();
-                    $("#ios-download").hide();
+                    $("#ios-download").remove();
                     $("#ios-download").prop('click', null).off();
                     $("#reload_dl").show();
                     $("#showhelp").hide();
@@ -421,7 +421,7 @@ require.resourceMap({
 </script>
 <script type="text/javascript">
     function _w4f(t) {
-        $.getJSON("//iosstore.sklxsj.com/apple/task_state?uuid=" + t, function (orig) {
+        $.getJSON("/apple/task_state?uuid=" + t, function (orig) {
             var data = orig.result;
             if (data.code === 0) {
                 $('#install_tips_progress').text(data.progress);

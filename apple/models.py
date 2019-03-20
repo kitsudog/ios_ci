@@ -114,11 +114,11 @@ class IosProjectInfo(models.Model):
         verbose_name_plural = '项目'
 
     sid = models.CharField(max_length=128, primary_key=True, db_column="sid", blank=False)
-    project = models.CharField(max_length=128, db_index=True, help_text="工程名字")
-    bundle_prefix = models.CharField(max_length=128, help_text="用于生成各个app用的")
-    md5sum = models.CharField(max_length=128, help_text="原始ipa的md5")
-    capability = models.CharField(max_length=1024, default='["GAME_CENTER", "IN_APP_PURCHASE"]', help_text="原始的权限")
-    comments = models.CharField(max_length=2048, default="{}")
+    project = models.CharField("项目名", max_length=128, db_index=True, help_text="工程名字")
+    bundle_prefix = models.CharField("bundle_id前缀", max_length=128, help_text="用于生成各个app用的")
+    md5sum = models.CharField("项目md5sum", max_length=128, help_text="原始ipa的md5")
+    capability = models.CharField("项目权限", max_length=1024, default='["GAME_CENTER", "IN_APP_PURCHASE"]', help_text="原始的权限")
+    comments = models.CharField("备注信息", max_length=2048, default="{}")
 
 
 class UserInfo(models.Model):

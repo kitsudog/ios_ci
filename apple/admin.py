@@ -5,16 +5,18 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from apple.models import IosProjectInfo, IosAccountInfo, TaskInfo, IosProfileInfo
+from apple.views import init_account
 
 admin.site.site_title = "打包后台"
 admin.site.site_header = "打包后台"
 admin.site.index_title = "打包后台"
 
 
+# noinspection PyMethodMayBeStatic
 @admin.register(IosProjectInfo)
 class IosProjectInfoAdmin(admin.ModelAdmin):
     list_display_links = ['project']
-    list_display = ('project', 'bundle_prefix')
+    list_display = ('project', 'bundle_prefix', 'human_md5sum')
     list_editable = ['bundle_prefix']
     search_fields = ('project',)
     fieldsets = (
@@ -26,6 +28,14 @@ class IosProjectInfoAdmin(admin.ModelAdmin):
             'fields': ('capability',),
         }]
     )
+
+    def human_md5sum(self, _info: IosProjectInfo):
+        if _info.md5sum:
+            return "已提交"
+        else:
+            return "尚未提交"
+
+    human_md5sum.short_description = "状态"
 
     def save_model(self, request, obj, form, change):
         if not change:
@@ -41,6 +51,7 @@ class IosAccountInfoAdmin(admin.ModelAdmin):
     search_fields = ('account',)
     list_per_page = 10
     ordering = ('-devices_num',)
+    actions = ['init_project']
     fieldsets = (
         ['基本信息', {
             'fields': ('account', 'password'),
@@ -50,6 +61,14 @@ class IosAccountInfoAdmin(admin.ModelAdmin):
             'fields': ('phone',),
         }]
     )
+
+    # noinspection PyUnusedLocal
+    def init_project(self, request, queryset):
+        _info = queryset.first()  # type: IosAccountInfo
+        init_account({"account": _info.account})
+        self.message_user(request, "执行完毕")
+
+    init_project.short_description = "账号初始化"
 
 
 @admin.register(IosProfileInfo)
