@@ -5,7 +5,7 @@ import re
 import tempfile
 import time
 from subprocess import call
-from typing import Dict, List, Callable, Optional
+from typing import Dict, List, Callable
 
 import gevent
 import requests
@@ -382,8 +382,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
     title = "设备%s" % udid
     _config = IosAccountHelper(account)
     try:
-        _device = IosDeviceInfo.objects.filter(udid=udid).first()  # type:Optional[IosDeviceInfo]
-        if not _device:
+        if udid not in account.devices:
             # 先注册设备
             ret = _config.post(
                 "验证设备udid",
@@ -393,23 +392,33 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                     "register": "single",
                     "teamId": _config.team_id,
                 }, cache=True)
-
-            Assert(len(ret["failedDevices"]) == 0, "验证udid请求失败[%s][%s]" % (udid, ret["validationMessages"]))
-            __list_all_devices(_config)
-            ret = _config.post(
-                "添加设备",
-                "https://developer.apple.com/services-account/QH65B2/account/ios/device/addDevices.action?teamId=%s" % _config.team_id, {
-                    "deviceClasses": "iphone",
-                    "deviceNames": title,
-                    "deviceNumbers": udid,
-                    "register": "single",
-                    "teamId": _config.team_id,
-                }, csrf=True)
-            Assert(ret["resultCode"] == 0, "添加udid请求失败[%s]" % udid)
-            Assert(not ret["validationMessages"], "添加udid请求失败[%s]" % udid)
-            Assert(ret["devices"], "添加udid请求失败[%s]" % udid)
-            device = ret["devices"][0]  # type: Dict
-            _reg_device(device["deviceId"], device["deviceNumber"], device["model"], device["serialNumber"])
+            if len(ret["failedDevices"]) == 0:
+                added = False
+            else:
+                if "already exists on this team" in ret["failedDevices"][0]:
+                    # 已经添加过了
+                    Log("[%s]已经添加过的设备了[%s]" % (account.account, udid))
+                    added = True
+                    __list_all_devices(_config)
+                else:
+                    raise Fail("验证udid请求失败[%s][%s]" % (udid, ret["validationMessages"]))
+            if not added:
+                __list_all_devices(_config)
+                ret = _config.post(
+                    "添加设备",
+                    "https://developer.apple.com/services-account/QH65B2/account/ios/device/addDevices.action?teamId=%s" % _config.team_id,
+                    {
+                        "deviceClasses": "iphone",
+                        "deviceNames": title,
+                        "deviceNumbers": udid,
+                        "register": "single",
+                        "teamId": _config.team_id,
+                    }, csrf=True)
+                Assert(ret["resultCode"] == 0, "添加udid请求失败[%s]" % udid)
+                Assert(not ret["validationMessages"], "添加udid请求失败[%s]" % udid)
+                Assert(ret["devices"], "添加udid请求失败[%s]" % udid)
+                device = ret["devices"][0]  # type: Dict
+                _reg_device(_config.account, device["deviceId"], device["deviceNumber"], device["model"], device["serialNumber"])
 
         with Block("更新"):
             ret, _info = __list_all_profile(_config, project)
@@ -448,7 +457,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                             "provisioningProfileName": each["name"],
                             "appIdId": _app.app_id_id,
                             "certificateIds": _cert.cert_req_id,
-                            "deviceIds": ",".join(_get_device_id(devices).values()),
+                            "deviceIds": ",".join(map(lambda x: _config.info.devices[x], devices)),
                         }, csrf=True)
                     Assert(ret["resultCode"] == 0)
                     _info.devices = json_str(devices)
@@ -467,7 +476,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                         data={
                             "subPlatform": "",
                             "certificateIds": _cert.cert_req_id,
-                            "deviceIds": ",".join(_get_device_id(devices).values()),
+                            "deviceIds": ",".join(map(lambda x: _config.info.devices[x], devices)),
                             "template": "",
                             "returnFullObjects": False,
                             "distributionTypeLabel": "distributionTypeLabel",
