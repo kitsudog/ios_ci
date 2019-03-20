@@ -20,13 +20,13 @@ class IosAccountInfo(models.Model):
     password = models.CharField("密码", max_length=128)
     teams = models.CharField("所有分组", max_length=128)
     team_id = models.CharField("当前分组", max_length=128, db_index=True)
-    cookie = models.TextField("当前cookie")
-    headers = models.CharField(max_length=1024)
+    cookie = models.TextField("当前cookie", default="{}")
+    headers = models.CharField(max_length=1024, default="{}")
     csrf = models.CharField(max_length=128)
     csrf_ts = models.BigIntegerField(default=0)
-    devices = models.TextField("当前设备")
+    devices = models.TextField("当前设备", default="[]")
     devices_num = models.IntegerField("设备数", default=0)
-    phone = models.CharField("绑定手机", max_length=128, help_text="二次验证用的")
+    phone = models.CharField("绑定手机", max_length=128, default="", help_text="二次验证用的")
 
 
 class IosDeviceInfo(models.Model):

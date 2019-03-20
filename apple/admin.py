@@ -2,10 +2,12 @@
 from datetime import datetime
 
 from django.contrib import admin
+from django.core.checks import messages
 from django.utils.html import format_html
 
 from apple.models import IosProjectInfo, IosAccountInfo, TaskInfo, IosProfileInfo
 from apple.views import init_account
+from base.style import str_json_i
 
 admin.site.site_title = "打包后台"
 admin.site.site_header = "打包后台"
@@ -25,7 +27,7 @@ class IosProjectInfoAdmin(admin.ModelAdmin):
         }],
         ['额外信息', {
             'classes': ('collapse',),
-            'fields': ('capability',),
+            'fields': ('capability', 'comments'),
         }]
     )
 
@@ -42,6 +44,9 @@ class IosProjectInfoAdmin(admin.ModelAdmin):
             obj.sid = form.data["project"]
             obj.save()
         else:
+            if not str_json_i(form.data["comments"]):
+                self.message_user(request, "json格式错误", level=messages.ERROR)
+                return
             super().save_model(request, obj, form, change)
 
 
