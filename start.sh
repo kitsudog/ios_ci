@@ -24,8 +24,8 @@ then
 fi
 
 
-nohup python3.6 -m celery worker -A ios_ci --loglevel INFO --logfile /var/log/server/celery.log &
-nohup python3.6 -m celery flower -A ios_ci &
+#nohup python3.6 -m celery worker -A ios_ci --loglevel INFO --logfile /var/log/server/celery.log &
+
 
 mkdir -p /data/income
 mkdir -p /data/projects
@@ -38,4 +38,5 @@ then
     uwsgi --socket :8000 --gevent --gevent-monkey-patch --module ios_ci.wsgi  --async 100 --http-keepalive --chmod-socket=664
 else
     python3.6 manage.py runserver 0.0.0.0:8000
+    nohup python3.6 -m celery flower -A ios_ci &
 fi
