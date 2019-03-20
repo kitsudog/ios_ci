@@ -923,7 +923,7 @@ def rebuild(uuid: str):
 
 
 @Action
-def task_state(uuid: str, worker: str = "", state: str = ""):
+def task_state(uuid: str, worker: str = "", state: str = "", auto_start=True):
     _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
     if state:
         if _task.worker:
@@ -939,6 +939,11 @@ def task_state(uuid: str, worker: str = "", state: str = ""):
             "succ": True,
         }
     else:
+        if _task.state in {"fail", "expire", "none", ""}:
+            # noinspection PyTypeChecker
+            rebuild({
+                "uuid": uuid,
+            })
         # 获取当前的状态
         return {
             "code": 1 if _task.state in {"fail", "expire"} else 0,

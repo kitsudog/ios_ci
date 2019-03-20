@@ -6,7 +6,7 @@ from django.core.checks import messages
 from django.utils.html import format_html
 
 from apple.models import IosProjectInfo, IosAccountInfo, TaskInfo, IosProfileInfo
-from apple.views import init_account
+from apple.views import init_account, rebuild
 from base.style import str_json_i
 
 admin.site.site_title = "打包后台"
@@ -120,7 +120,12 @@ class TaskInfoAdmin(admin.ModelAdmin):
 
     # noinspection PyUnusedLocal
     def restart(self, request, queryset):
-        self.message_user(request, "执行完毕")
+        _info = queryset.first()  # type:TaskInfo
+        # noinspection PyTypeChecker
+        rebuild({
+            "uuid": _info.uuid,
+        })
+        self.message_user(request, "任务重新提交执行")
 
     restart.short_description = "重提提交任务"
     actions = ['restart']
