@@ -12,9 +12,11 @@ import requests
 from base.style import str_json, now, to_form_url, Assert, Log, json_str, Fail, str_json_i, Block
 from base.utils import base64, base64decode
 from frameworks.db import db_session, message_from_topic
+# noinspection PyProtectedMember
+from ios_ci.settings import _valid_host
 from .models import IosAccountInfo
 
-__HOST = os.environ.get("VIRTUAL_HOST", "127.0.0.1:8000")
+__HOST = _valid_host(os.environ.get("VIRTUAL_HOST", "127.0.0.1:8000"))[0]
 
 
 def entry(path: str) -> str:
