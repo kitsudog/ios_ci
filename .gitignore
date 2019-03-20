@@ -10,5 +10,10 @@ gen
 */migrations/0*
 /logs
 /static/income
+/static/projects/
 /tools/logs
 /tools/package
+/package
+/dist/
+/build/
+/static/packages/

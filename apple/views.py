@@ -11,7 +11,8 @@ import gevent
 import requests
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse
 
-from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url, test_env
+from apple.tasks import resign_ipa
+from base.style import str_json, Assert, json_str, Log, now, Block, date_time_str, Fail, Trace, tran, to_form_url, test_env, ide_debug
 from base.utils import base64decode, md5bytes, base64, read_binary_file
 from frameworks.base import Action
 from frameworks.db import db_model, db_session, message_from_topic
@@ -491,23 +492,26 @@ def __add_task(_user: UserInfo):
     _project = IosProjectInfo.objects.filter(project=_user.project).first()  # type:IosProjectInfo
     _profile = IosProfileInfo.objects.filter(sid="%s:%s" % (_user.account, _user.project)).first()  # type:IosProfileInfo
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
+    Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
     Log("[%s]发布任务[%s]" % (_user.project, _user.account))
-    _task = TaskInfo.objects.get_or_create(uuid=_user.uuid)
+    _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
     _task.state = "none"
+    _task.worker = ""
     _task.save()
-
-    db_session.publish("task:package", json_str({
+    resign_ipa.delay(**{
+        "uuid": _user.uuid,
         "cert": "iPhone Developer: zhangming luo",
-        "cert_p12": "",
+        "cert_url": entry("/apple/download_cert?uuid=%s" % _user.uuid),
+        "cert_md5": md5bytes(base64decode("")),
         "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
         "mp_md5": md5bytes(base64decode(_profile.profile)),
         "project": _project.project,
         "ipa_url": _asset_url("%s/orig.ipa" % _user.project),
         "ipa_md5": _project.md5sum,
         "ipa_new": "%s_%s.ipa" % (_account.team_id, _account.devices_num),
-        "upload_url": entry("/apple/upload_ipa?project=%s&account=%s" % (_user.project, _user.account)),
-        "ts": now(),
-    }))
+        "upload_url": entry("/apple/upload_ipa?uuid=%s" % _user.uuid),
+        "process_url": entry("/apple/task_state?uuid=%s" % _user.uuid),
+    })
 
 
 # noinspection PyShadowingNames
@@ -669,6 +673,22 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
 
 
 @Action
+def upload_project_ipa(project: str, file: bytes):
+    _info = IosProjectInfo.objects.get(project=project)
+    base = os.path.join("static/packages", project)
+    os.makedirs(base, exist_ok=True)
+    with open(os.path.join(base, "orig.ipa"), mode="wb") as fout:
+        fout.write(file)
+    _info.md5sum = md5bytes(file)
+    _info.save()
+    Log("更新工程[%s]的ipa[%s]" % (project, _info.md5sum))
+    # todo: 激活更新一下
+    return {
+        "succ": True,
+    }
+
+
+@Action
 def upload_ipa(worker: str, uuid: str, file: bytes):
     _user = UserInfo.objects.get(uuid=uuid)
     project = _user.project
@@ -682,9 +702,10 @@ def upload_ipa(worker: str, uuid: str, file: bytes):
         fout.write(file)
     Log("[%s]收到新打包的ipa[%s]" % (account, filename))
     # todo: 遍历所有的设备关联的包?
-    _task = TaskInfo.objects.get_or_create(uuid=uuid)
+    _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
     if _task.worker in {worker, "none"}:
         _task.state = "succ"
+        _task.worker = worker
         _task.size = len(file)
         _task.save()
     return {
@@ -886,10 +907,23 @@ _states = ["ready", "prepare_env", "prepare_cert", "prepare_mp", "prepare_ipa", 
 
 
 @Action
+def rebuild(uuid: str):
+    _user = UserInfo.objects.get(uuid=uuid)
+    __add_task(_user)
+    return {
+        "succ": True,
+    }
+
+
+@Action
 def task_state(uuid: str, worker: str, state: str = ""):
-    _task = TaskInfo.objects.get_or_create(uuid=uuid)
+    _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
     if state:
-        Assert(_task.worker == worker, "越权更改任务[%s]状态" % uuid)
+        if _task.worker:
+            Assert(_task.worker == worker, "越权更改任务[%s]状态[%s]=>[%s]" % (uuid, _task.worker, worker))
+        else:
+            _task.worker = worker
+            _task.save()
         if _task.state != state:
             Log("任务[%s]状态变更[%s]=>[%s]" % (uuid, _task.state, state))
             _task.state = state
@@ -904,3 +938,17 @@ def task_state(uuid: str, worker: str, state: str = ""):
             "finish": _task.state == "succ",
             "progress": "%d%%" % ((_states.index(_task.state) + 1) * 100 / len(_states)) if _task.state in _states else "0%",
         }
+
+
+if ide_debug():
+    # noinspection PyProtectedMember
+    def _debug():
+        Log("初始化一个测试项目")
+        _info, created = IosProjectInfo.objects.get_or_create(sid="test", project="test")
+        if created:
+            _info.bundle_prefix = "com.test"
+            _info.save()
+        upload_project_ipa._orig_func("test", read_binary_file("projects/test.ipa"))
+
+
+    _debug()

@@ -23,10 +23,18 @@ python3.6 manage.py collectstatic --no-input
 python3.6 manage.py makemigrations --noinput
 python3.6 manage.py migrate
 
-# todo: celery -B 只用于debug模式
-# nohup celery worker -A loop -B --loglevel INFO --logfile /var/log/server/celery.log &
+if [[ ${FLOWER_ONLY:-FALSE} = "TRUE" ]]
+then
+    python3.6 -m celery -A tasks flower
+    exit
+fi
+nohup celery worker -A tasks -B --loglevel INFO --logfile /var/log/server/celery.log &
 
-ln -s /var/www/income /app/server/static/income
+mkdir -p /data/income
+mkdir -p /data/projects
+
+ln -s /data/income /app/server/static/income
+ln -s /data/projects /app/server/static/projects
 
 if [[ ${UWSGI:-FALSE} = "TRUE" || ${VIRTUAL_PROTO:-http} = "uwsgi" ]]
 then

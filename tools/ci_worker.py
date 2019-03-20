@@ -484,12 +484,13 @@ def run(host, port):
 
 
 # noinspection PyProtectedMember,PyPackageRequirements,PyBroadException
-def __init_module(module):
-    try:
-        exec("import %s" % module)
-    except Exception:
-        import pip._internal
-        pip._internal.main(["install", module])
+def __init_module(module, version=""):
+    import pip._internal
+    if version:
+        pip._internal.main(["install", "-q", "%s==%s" % (module, version)])
+    else:
+        pip._internal.main(["install", "-q", module])
+    exec("import %s" % module)
 
 
 def init_env():
@@ -498,21 +499,38 @@ def init_env():
     for each in filter(lambda x: x.endswith("_BIN"), globals()):
         each = eval(each)
         assert os.path.isfile(each), "请确保文件存在[%s]" % each
-    __init_module("redis")
+    __init_module("redis", "3.2.0")
     __init_module("gevent")
     __init_module("requests")
+    __init_module("celery")
+
+
+def celery_worker(redis_host, redis_port):
+    from celery import Celery
+    BROKER_URL = "redis://%s:%s/13" % (redis_host, redis_port)
+    CELERY_RESULT_BACKEND = BROKER_URL
+    app = Celery('tasks', broker=BROKER_URL, backend=CELERY_RESULT_BACKEND)
+    app.conf.update(
+        CELERY_TASK_SERIALIZER='json',
+        CELERY_ACCEPT_CONTENT=['json'],  # Ignore other content
+        CELERY_RESULT_SERIALIZER='json',
+        CELERY_TIMEZONE='Asia/Shanghai',
+        CELERY_ENABLE_UTC=True,
+    )
+    app.task(_task)
+    app.start(["", "worker"])
 
 
 if __name__ == "__main__":
     # 安装基础环境
     init_env()
     if len(sys.argv) >= 2:
-        # from gevent import monkey
-        #
-        # monkey.patch_all()
-        run(sys.argv[1], int(sys.argv[2]))
-        # _package("/Users/zhangmingluo/Downloads/tmp/test/2048.ipa", "/Users/zhangmingluo/Downloads/tmp/test/_package.mobileprovision",
-        #          "iPhone Developer: zhangming luo (ZL8XHT7944)")
+        from gevent import monkey
+
+        monkey.patch_all()
+        # run(sys.argv[1], int(sys.argv[2]))
+        celery_worker(sys.argv[1], int(sys.argv[2]))
+
     else:
         Log("""\
 Usage: 

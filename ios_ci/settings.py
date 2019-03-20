@@ -11,20 +11,34 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 import os
 
-import djcelery
+from celery.schedules import crontab
 
-djcelery.setup_loader()
-
-REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
-REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
-BROKER_URL = "redis://%s:%s/13" % (REDIS_HOST, REDIS_PORT)
-CELERY_RESULT_BACKEND = "redis://%s:%s/13" % (REDIS_HOST, REDIS_PORT)
+RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "127.0.0.1")
+RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT", 5672)
+RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "admin")
+RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "admin")
+RABBITMQ_NAME = os.environ.get("RABBITMQ_NAME", "celery")
+CELERY_BROKER_URL = "amqp://%s:%s@%s:%s/%s" % (RABBITMQ_USER, RABBITMQ_PASS, RABBITMQ_HOST, RABBITMQ_PORT, RABBITMQ_NAME)
+CELERY_RESULT_BACKEND = 'amqp'
+# CELERY_RESULT_PERSISTENT = True
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 CELERY_TIMEZONE = 'Asia/Shanghai'
-
+CELERY_BEAT_SCHEDULE = {
+    # 周期性任务
+    'task-one': {
+        'task': 'apple.tasks.print_hello',
+        'schedule': 5.0,  # 每5秒执行一次
+        # 'args': ()
+    },
+    # 定时任务
+    'task-two': {
+        'task': 'apple.tasks.print_hello',
+        'schedule': crontab(minute=0, hour='*/3,10-19'),
+        # 'args': ()
+    }
+}
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -50,7 +64,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'apple',
-    'djcelery',
 ]
 
 # noinspection PyBroadException

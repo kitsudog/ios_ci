@@ -14,15 +14,15 @@ uwsgi = "*"
 rsa = "==3.4.2"
 pycrypto = "==2.6.1"
 pymongo = "*"
-redis = "*"
 hyper = "*"
 mysqlclient = "*"
 biplist = "*"
 uncurl = "*"
 pyjwt = "*"
-django-celery = "*"
-celery = {extras = ["gevent", "redis"],version = "*"}
 django-suit = {file = "https://github.com/darklow/django-suit/tarball/v2"}
+flower = "*"
+redis = "*"
+celery = ">=4"
 
 [requires]
 python_version = "3.6"

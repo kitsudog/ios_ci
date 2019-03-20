@@ -22,7 +22,7 @@ from core.views import static, static_php
 urlpatterns = [
     # 各个具体的渠道
     url(r'^admin/', admin.site.urls),
-    path('apple/', include("apple.urls")),
+    path(r'apple/', include("apple.urls")),
     url(r'.*.php$', static_php),
     url(r'.*', static),
 ]
