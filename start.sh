@@ -10,7 +10,7 @@ fi
 
 if [[ ! -x /usr/local/bin/uwsgi ]]
 then
-    pip3.6 install --trusted-host mirrors.aliyun.com -i http://mirrors.aliyun.com/pypi/simple uwsgi
+    pip3.6 install --trusted-host mirrors.aliyun.com -i http://mirrors.aliyun.com/pypi/simple -I uwsgi
 fi
 
 python3.6 manage.py collectstatic --no-input

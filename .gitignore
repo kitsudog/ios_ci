@@ -17,3 +17,5 @@ gen
 /dist/
 /build/
 /static/packages/
+/tools/dist/
+/tools/build/
