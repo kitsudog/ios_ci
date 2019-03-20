@@ -744,7 +744,7 @@ def manifest(uuid: str):
                         <key>kind</key>
                         <string>software-package</string>
                         <key>url</key>
-                        <string>https://iosstore.sklxsj.com/apple/download-ipa?uuid=%(uuid)s</string>
+                        <string>https://iosstore.sklxsj.com/apple/download_ipa?uuid=%(uuid)s</string>
                     </dict>
                     <dict>
                         <key>kind</key>
