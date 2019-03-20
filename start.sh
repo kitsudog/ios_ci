@@ -28,7 +28,8 @@ then
     python3.6 -m celery -A tasks flower
     exit
 fi
-nohup celery worker -A tasks -B --loglevel INFO --logfile /var/log/server/celery.log &
+nohup python3.6 -m celery worker -A ios_ci --loglevel INFO --logfile /var/log/server/celery.log &
+nohup python3.6 -m celery flower -A ios_ci &
 
 mkdir -p /data/income
 mkdir -p /data/projects

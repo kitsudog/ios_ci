@@ -14,5 +14,4 @@ biplist
 uncurl
 pyjwt
 celery[redis,gevent]
-django-celery
 flower
