@@ -751,7 +751,7 @@ def manifest(uuid: str):
                         <key>kind</key>
                         <string>software-package</string>
                         <key>url</key>
-                        <string>https://static_iosstore.sklxsj.com/%(project)s/%(filename)s</string>
+                        <string>https://static_iosstore.sklxsj.com/income/%(project)s/%(filename)s</string>
                     </dict>
                     <dict>
                         <key>kind</key>
