@@ -1,7 +1,10 @@
+from datetime import datetime
+
 from django.db import models
 
 
 # Create your models here.
+
 
 class IosAccountInfo(models.Model):
     """
@@ -11,18 +14,19 @@ class IosAccountInfo(models.Model):
 
     class Meta:
         db_table = "ios_account_info"
+        verbose_name_plural = '账号'
 
-    account = models.CharField(max_length=128, primary_key=True)
-    password = models.CharField(max_length=128)
-    teams = models.CharField(max_length=128)
-    team_id = models.CharField(max_length=128, db_index=True)
-    cookie = models.TextField()
+    account = models.CharField("账号名", max_length=128, primary_key=True)
+    password = models.CharField("密码", max_length=128)
+    teams = models.CharField("所有分组", max_length=128)
+    team_id = models.CharField("当前分组", max_length=128, db_index=True)
+    cookie = models.TextField("当前cookie")
     headers = models.CharField(max_length=1024)
     csrf = models.CharField(max_length=128)
     csrf_ts = models.BigIntegerField(default=0)
-    devices = models.TextField()
-    devices_num = models.IntegerField(default=0)
-    phone = models.CharField(max_length=128, help_text="二次验证用的")
+    devices = models.TextField("当前设备")
+    devices_num = models.IntegerField("设备数", default=0)
+    phone = models.CharField("绑定手机", max_length=128, help_text="二次验证用的")
 
 
 class IosDeviceInfo(models.Model):
@@ -32,12 +36,13 @@ class IosDeviceInfo(models.Model):
 
     class Meta:
         db_table = "ios_device_info"
+        verbose_name_plural = '设备'
 
-    udid = models.CharField(max_length=128, primary_key=True, db_column="udid", blank=False)
-    device_id = models.CharField(max_length=128, db_index=True)
-    model = models.CharField(max_length=128)
+    udid = models.CharField("设备udid", max_length=128, primary_key=True, db_column="udid", blank=False)
+    device_id = models.CharField("设备id", max_length=128, db_index=True)
+    model = models.CharField("机型", max_length=128)
     sn = models.CharField(max_length=128)
-    create = models.DateTimeField(auto_now=True)
+    create = models.DateTimeField("登记时间", auto_now=True)
 
 
 class IosAppInfo(models.Model):
@@ -47,6 +52,7 @@ class IosAppInfo(models.Model):
 
     class Meta:
         db_table = "ios_app_info"
+        verbose_name_plural = 'App'
 
     sid = models.CharField(max_length=128, primary_key=True, db_column="sid", blank=False)
     app = models.CharField(max_length=128, db_index=True)
@@ -65,6 +71,7 @@ class IosCertInfo(models.Model):
 
     class Meta:
         db_table = "ios_cert_info"
+        verbose_name_plural = '证书'
 
     sid = models.CharField(max_length=128, primary_key=True, db_column="sid", blank=False)
     app = models.CharField(max_length=128, db_index=True)
@@ -85,6 +92,7 @@ class IosProfileInfo(models.Model):
 
     class Meta:
         db_table = "ios_profile_info"
+        verbose_name_plural = 'MobileProfile配置'
 
     sid = models.CharField(max_length=128, primary_key=True, db_column="sid", blank=False)
     app = models.CharField(max_length=128)
@@ -103,6 +111,7 @@ class IosProjectInfo(models.Model):
 
     class Meta:
         db_table = "ios_project_info"
+        verbose_name_plural = '项目'
 
     sid = models.CharField(max_length=128, primary_key=True, db_column="sid", blank=False)
     project = models.CharField(max_length=128, db_index=True, help_text="工程名字")
@@ -119,6 +128,7 @@ class UserInfo(models.Model):
 
     class Meta:
         db_table = "user_info"
+        verbose_name_plural = '用户'
 
     uuid = models.CharField(max_length=128, primary_key=True, help_text="随机分配的")
     udid = models.CharField(max_length=128, db_index=True, help_text="设备id 关联IosDeviceInfo")
@@ -126,3 +136,33 @@ class UserInfo(models.Model):
     app = models.CharField(max_length=128, help_text="被分配的app 关联IosAppInfo")
     account = models.CharField(max_length=128, help_text="被分配的账号 关联IosAccountInfo")
     create = models.DateTimeField(auto_now=True)
+
+
+class TaskInfo(models.Model):
+    """
+    每个打包的任务封装成一个任务对象
+    """
+
+    class Meta:
+        db_table = "task_info"
+        verbose_name_plural = '打包任务'
+
+    uuid = models.CharField("任务id", max_length=128, primary_key=True, help_text="跟着user_info.uuid")
+    state = models.CharField("状态", max_length=128, db_index=True, choices=(
+        ("ready", "准备"),
+        ("prepare_env", "准备环境"),
+        ("prepare_cert", "下载证书"),
+        ("prepare_mp", "下载mobileprofile"),
+        ("prepare_ipa", "下载ipa"),
+        ("unzip_ipa", "解压ipa"),
+        ("resign", "重新签名"),
+        ("package_ipa", "重新封包"),
+        ("upload_ipa", "上传ipa"),
+        ("succ", "打包成功"),
+        ("none", "尚未认领"),
+        ("fail", "打包失败"),
+        ("expire", "打包超时"),
+    ), help_text="当前任务的状态", default="ready")
+    worker = models.CharField("打包终端", max_length=1024, db_index=True, help_text="当前工作的打包机", default="none")
+    size = models.IntegerField("包尺寸", default=0, help_text="ipa的尺寸, 打包完成后才会有")
+    expire = models.DateTimeField("任务过期时间", default=datetime.now, help_text="打包任务的超时时间")

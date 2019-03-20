@@ -9,8 +9,21 @@ https://docs.djangoproject.com/en/2.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.0/ref/settings/
 """
-
 import os
+
+import djcelery
+
+djcelery.setup_loader()
+
+REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
+BROKER_URL = "redis://%s:%s/13" % (REDIS_HOST, REDIS_PORT)
+CELERY_RESULT_BACKEND = "redis://%s:%s/13" % (REDIS_HOST, REDIS_PORT)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
+CELERY_TIMEZONE = 'Asia/Shanghai'
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,7 +42,6 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"] if DEBUG else [os.environ.get("V
 # Application definition
 
 INSTALLED_APPS = [
-    # 'suit',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,7 +50,25 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'apple',
+    'djcelery',
 ]
+
+# noinspection PyBroadException
+try:
+    import suit
+    from suit.apps import DjangoSuitConfig
+
+    assert suit.VERSION.startswith("2."), "早期的版本不支持"
+
+
+    class SuitConfig(DjangoSuitConfig):
+        layout = 'vertical'
+
+
+    INSTALLED_APPS.insert(0, "ios_ci.settings.SuitConfig")
+    # INSTALLED_APPS.insert(0, "suit")
+except Exception as e:
+    pass
 
 MIDDLEWARE = [
     # 'django.middleware.security.SecurityMiddleware',
@@ -46,7 +76,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'django.contrib.messages.middleware.MessageMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'frameworks.django.JsonResponseHandler',
 ]
@@ -113,7 +143,6 @@ LANGUAGE_CODE = 'zh-Hans'
 
 DEFAULT_CHARSET = 'utf-8'
 
-# TIME_ZONE = 'UTC'
 TIME_ZONE = 'Asia/Shanghai'
 
 DATETIME_FORMAT = 'Y-m-d H:i:s'

@@ -208,6 +208,10 @@ class Action(DjangoAction):
                 each(orig_params, params)
         try:
             ret = self.func(**params)
+            if ret is None:
+                ret = {
+                    "succ": True,
+                }
         except Exception as e:
             # _be_log = req._log if is_req else req.get("_log")  # type:BeLog
             # if _be_log:

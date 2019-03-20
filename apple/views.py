@@ -16,7 +16,7 @@ from base.utils import base64decode, md5bytes, base64, read_binary_file
 from frameworks.base import Action
 from frameworks.db import db_model, db_session, message_from_topic
 from helper.name_generator import GetRandomName
-from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo
+from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo, TaskInfo
 from .utils import IosAccountHelper, publish_security_code, curl_parse_context, entry, get_capability
 
 
@@ -492,6 +492,10 @@ def __add_task(_user: UserInfo):
     _profile = IosProfileInfo.objects.filter(sid="%s:%s" % (_user.account, _user.project)).first()  # type:IosProfileInfo
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Log("[%s]发布任务[%s]" % (_user.project, _user.account))
+    _task = TaskInfo.objects.get_or_create(uuid=_user.uuid)
+    _task.state = "none"
+    _task.save()
+
     db_session.publish("task:package", json_str({
         "cert": "iPhone Developer: zhangming luo",
         "cert_p12": "",
@@ -665,7 +669,10 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
 
 
 @Action
-def upload_ipa(project: str, account: str, file: bytes):
+def upload_ipa(worker: str, uuid: str, file: bytes):
+    _user = UserInfo.objects.get(uuid=uuid)
+    project = _user.project
+    account = _user.account
     base = os.path.join("static/income", project)
     os.makedirs(base, exist_ok=True)
     _info = IosAccountInfo.objects.filter(account=account).first()  # type:IosAccountInfo
@@ -674,6 +681,12 @@ def upload_ipa(project: str, account: str, file: bytes):
     with open(os.path.join(base, filename), mode="wb") as fout:
         fout.write(file)
     Log("[%s]收到新打包的ipa[%s]" % (account, filename))
+    # todo: 遍历所有的设备关联的包?
+    _task = TaskInfo.objects.get_or_create(uuid=uuid)
+    if _task.worker in {worker, "none"}:
+        _task.state = "succ"
+        _task.size = len(file)
+        _task.save()
     return {
         "succ": True,
     }
@@ -867,3 +880,27 @@ def security_code(account: str, code: str):
     return {
         "succ": True,
     }
+
+
+_states = ["ready", "prepare_env", "prepare_cert", "prepare_mp", "prepare_ipa", "unzip_ipa", "resign", "package_ipa", "upload_ipa", "succ"]
+
+
+@Action
+def task_state(uuid: str, worker: str, state: str = ""):
+    _task = TaskInfo.objects.get_or_create(uuid=uuid)
+    if state:
+        Assert(_task.worker == worker, "越权更改任务[%s]状态" % uuid)
+        if _task.state != state:
+            Log("任务[%s]状态变更[%s]=>[%s]" % (uuid, _task.state, state))
+            _task.state = state
+            _task.save()
+        return {
+            "succ": True,
+        }
+    else:
+        # 获取当前的状态
+        return {
+            "code": _task.state not in {"fail", "expire"},
+            "finish": _task.state == "succ",
+            "progress": "%d%%" % ((_states.index(_task.state) + 1) * 100 / len(_states)) if _task.state in _states else "0%",
+        }

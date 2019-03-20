@@ -8,7 +8,6 @@
 [packages]
 gevent = "*"
 django = "==2.0.1"
-django-suit = "==0.2.25"
 requests = "*"
 xmltodict = "*"
 uwsgi = "*"
@@ -19,9 +18,11 @@ redis = "*"
 hyper = "*"
 mysqlclient = "*"
 biplist = "*"
-celery = "==4.1.1"
 uncurl = "*"
 pyjwt = "*"
+django-celery = "*"
+celery = {extras = ["gevent", "redis"],version = "*"}
+django-suit = {file = "https://github.com/darklow/django-suit/tarball/v2"}
 
 [requires]
 python_version = "3.6"

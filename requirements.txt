@@ -1,6 +1,6 @@
 gevent
 django==2.0.1
-django-suit==0.2.25
+#django-suit==0.2.25
 requests
 xmltodict
 uwsgi
@@ -11,6 +11,7 @@ redis
 hyper
 mysqlclient
 biplist
-Celery==4.1.1
 uncurl
 pyjwt
+celery[redis,gevent]
+django-celery
