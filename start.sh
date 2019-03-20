@@ -37,6 +37,6 @@ if [[ ${UWSGI:-FALSE} = "TRUE" || ${VIRTUAL_PROTO:-http} = "uwsgi" ]]
 then
     uwsgi --socket :8000 --gevent --gevent-monkey-patch --module ios_ci.wsgi  --async 100 --http-keepalive --chmod-socket=664
 else
-    python3.6 manage.py runserver 0.0.0.0:8000
     nohup python3.6 -m celery flower -A ios_ci &
+    python3.6 manage.py runserver 0.0.0.0:8000
 fi
