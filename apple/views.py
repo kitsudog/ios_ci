@@ -857,10 +857,12 @@ def info(_req: HttpRequest, project: str):
             _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
             if _user:
                 ready = True
+            else:
+                Log("一个无效的uuid[%s]" % uuid)
 
         if ready:
             ret.update({
-                "ready": False,
+                "ready": True,
             })
         else:
             uuid = _newbee(_project)
