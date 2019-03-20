@@ -163,6 +163,6 @@ class TaskInfo(models.Model):
         ("fail", "打包失败"),
         ("expire", "打包超时"),
     ), help_text="当前任务的状态", default="ready")
-    worker = models.CharField("打包终端", max_length=1024, db_index=True, help_text="当前工作的打包机", default="none")
+    worker = models.CharField("打包终端", max_length=128, db_index=True, help_text="当前工作的打包机", default="none")
     size = models.IntegerField("包尺寸", default=0, help_text="ipa的尺寸, 打包完成后才会有")
     expire = models.DateTimeField("任务过期时间", default=datetime.now, help_text="打包任务的超时时间")

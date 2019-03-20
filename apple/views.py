@@ -916,7 +916,7 @@ def rebuild(uuid: str):
 
 
 @Action
-def task_state(uuid: str, worker: str, state: str = ""):
+def task_state(uuid: str, worker: str = "", state: str = ""):
     _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
     if state:
         if _task.worker:
@@ -934,7 +934,7 @@ def task_state(uuid: str, worker: str, state: str = ""):
     else:
         # 获取当前的状态
         return {
-            "code": _task.state not in {"fail", "expire"},
+            "code": 1 if _task.state in {"fail", "expire"} else 0,
             "finish": _task.state == "succ",
             "progress": "%d%%" % ((_states.index(_task.state) + 1) * 100 / len(_states)) if _task.state in _states else "0%",
         }
