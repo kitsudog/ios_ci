@@ -426,13 +426,13 @@ require.resourceMap({
             if (data.code === 0) {
                 $('#install_tips_progress').text(data.progress);
                 if (data.finished) {
-                    history.replaceState(null, '微见', 'https://www.itunesappstore.cn/ioshelper/details.php?appid=edc37e05-e243-11e8-8847-00163e0e27d5');
-                    install_will_ok();
+                    // todo: 修正history
+                    install_will_ok(t);
                 } else {
                     window.setTimeout(_w4f, 3000, t);
                 }
             } else if (data.code === 1) {
-                history.replaceState(null, '微见', 'https://www.itunesappstore.cn/ioshelper/details.php?appid=edc37e05-e243-11e8-8847-00163e0e27d5');
+                // todo: 修正history
                 window.location.reload();
             } else {
                 $('#ios-installing div').text('下载失败');
@@ -447,7 +447,8 @@ require.resourceMap({
     hasTracked = false;
 
     function _dlproc(s) {
-        $.getJSON("https://www.itunesappstore.cn/ioshelper/dlprog.php?s=" + s, function (data) {
+        $.getJSON("/apple/download_process?uuid=" + s, function (orig) {
+            var data = orig.result;
             if (data.code === 0) {
                 // 停用下载按钮，改为重试按钮
                 if (!isDownloading) {
@@ -481,7 +482,6 @@ require.resourceMap({
                         lastBytes = data.progress;
 
                         if (!hasTracked) {
-                            ;
                             hasTracked = true;
                         }
                     }
@@ -501,7 +501,7 @@ require.resourceMap({
                                 // 尝试打开
                                 $('#trylink').off();
                                 $('#trylink').on('click', function () {
-                                    $.ajax("https://www.itunesappstore.cn/ioshelper/trylink.php?s=" + s);
+                                    // todo: 记录try_link操作
                                     window.setTimeout(function (tryTime) {
                                         thisTime = new Date().getTime();
                                         if (Math.abs(thisTime - tryTime - 5000) < 1000) {
@@ -528,9 +528,8 @@ require.resourceMap({
     }
 
     function install_will_ok() {
-        history.replaceState(null, '', "https://www.itunesappstore.cn/ioshelper/details.php?appid=edc37e05-e243-11e8-8847-00163e0e27d5");
-
-        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("https://www.itunesappstore.cn/ioshelper/manifest.php?s=d8d9ee75-4a11-11e9-a70a-00163e0e27d5");
+        // todo: 更新history
+        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("https://iosstore.sklxsj.com/apple/manifest?uuid=" + uuid);
         $('#ios-installing').css('width', 'auto');
         $('#ios-installing div').css('font-size', '12px').css('width', '154px').text("准备安装");
         $('#install_btn_container').removeClass('install-btn-container-loading');
@@ -540,7 +539,7 @@ require.resourceMap({
                 window.location.href = manifest_url;
                 $('#ios-installing div').text("等待下载");
                 window.clearTimeout(_dlproc);
-                window.setTimeout(_dlproc, 3000, "d8d9ee85-4a11-11e9-a70a-00163e0e27d5");
+                window.setTimeout(_dlproc, 3000, uuid);
             } else {
 
             }

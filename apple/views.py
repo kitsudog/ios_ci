@@ -939,7 +939,7 @@ def task_state(uuid: str, worker: str = "", state: str = "", auto_start=True):
             "succ": True,
         }
     else:
-        if _task.state in {"fail", "expire", "none", ""}:
+        if auto_start and _task.state in {"fail", "expire", "none", ""}:
             # noinspection PyTypeChecker
             rebuild({
                 "uuid": uuid,
@@ -947,9 +947,19 @@ def task_state(uuid: str, worker: str = "", state: str = "", auto_start=True):
         # 获取当前的状态
         return {
             "code": 1 if _task.state in {"fail", "expire"} else 0,
-            "finish": _task.state == "succ",
+            "finished": _task.state == "succ",
             "progress": "%d%%" % ((_states.index(_task.state) + 1) * 100 / len(_states)) if _task.state in _states else "0%",
         }
+
+
+@Action
+def download_process(uuid: str):
+    _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
+    return {
+        "code": 0,
+        "progress": _task.size * 0.3,
+        "total": _task.size,
+    }
 
 
 if ide_debug():

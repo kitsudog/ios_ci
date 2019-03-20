@@ -91,14 +91,17 @@ class IosProfileInfoAdmin(admin.ModelAdmin):
 class TaskInfoAdmin(admin.ModelAdmin):
     list_filter = ['state']
     search_fields = ('uuid', 'worker')
-    list_display = ('uuid', 'worker', 'human_state', 'human_expire')
+    list_display = ('uuid', 'worker', 'size', 'human_state', 'human_expire')
     date_hierarchy = 'expire'
 
     # fk_fields = ('uuid',)
 
-    def human_expire(self, _info):
+    def human_expire(self, _info: TaskInfo):
         end_date = _info.expire
-        if end_date >= datetime.now():
+        if _info.state == "succ":
+            ret = '成功'
+            color_code = 'green'
+        elif end_date >= datetime.now():
             ret = '未过期'
             color_code = 'green'
         else:
