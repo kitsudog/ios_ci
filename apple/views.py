@@ -727,9 +727,9 @@ def download_ipa(uuid: str):
 
 @Action
 def manifest(uuid: str):
-    _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
-    _project = IosProjectInfo.objects.filter(project=_user.project).first()  # type: IosProjectInfo
-    _app = IosAppInfo.objects.filter(sid="%s:%s" % (_user.account, _user.project)).first()  # type: IosAppInfo
+    _user = UserInfo.objects.get(uuid=uuid)
+    _project = IosProjectInfo.objects.get(project=_user.project)
+    _app = IosAppInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
     _comments = str_json(_project.comments)
     content = """\
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
