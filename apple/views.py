@@ -852,15 +852,20 @@ def info(_req: HttpRequest, project: str):
     if _project:
         ret = str_json(_project.comments)
         uuid = _req.get_signed_cookie("uuid", "", salt="zhihu")
-        if not uuid:
-            uuid = _newbee(_project)
+        ready = False
+        if uuid:
+            _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
+            if _user:
+                ready = True
+
+        if ready:
             ret.update({
                 "ready": False,
             })
         else:
-            _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
+            uuid = _newbee(_project)
             ret.update({
-                "ready": True,
+                "ready": False,
             })
 
         ret.update({
