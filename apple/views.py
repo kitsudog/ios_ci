@@ -728,6 +728,7 @@ def download_ipa(uuid: str):
 @Action
 def manifest(uuid: str):
     _user = UserInfo.objects.get(uuid=uuid)
+    _account = IosAccountInfo.objects.get(account=_user.account)
     _project = IosProjectInfo.objects.get(project=_user.project)
     _app = IosAppInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
     _comments = str_json(_project.comments)
@@ -744,7 +745,7 @@ def manifest(uuid: str):
                         <key>kind</key>
                         <string>software-package</string>
                         <key>url</key>
-                        <string>https://iosstore.sklxsj.com/apple/download_ipa?uuid=%(uuid)s</string>
+                        <string>https://static_iosstore.sklxsj.com/income/%(project)s/%(filename)s</string>
                     </dict>
                     <dict>
                         <key>kind</key>
@@ -780,6 +781,8 @@ def manifest(uuid: str):
         "icon": _comments["icon"],
         "app": _app.identifier,
         "version": "1.0.0",
+        "project": _project.project,
+        "filename": "%s_%s.ipa" % (_account.team_id, _account.devices_num)
     }
     response = HttpResponse(content)
     response['Content-Type'] = 'application/octet-stream; charset=utf-8'
