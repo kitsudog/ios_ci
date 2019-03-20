@@ -231,5 +231,5 @@ SUIT_CONFIG = {
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
-STATIC_URL = '/static/' if DEBUG else 'http://static_iosstore.sklxsj.com/'
+STATIC_URL = '/static/' if DEBUG else '//static_iosstore.sklxsj.com/'
 STATIC_ROOT = 'static' if DEBUG else '/var/www/html'
