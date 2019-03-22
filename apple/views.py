@@ -12,13 +12,14 @@ import requests
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse
 
 from apple.tasks import resign_ipa
-from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, test_env, ide_debug
+from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug
 from base.utils import base64decode, md5bytes, base64, read_binary_file
 from frameworks.base import Action
 from frameworks.db import db_session, message_from_topic
+from frameworks.utils import entry, static_entry
 from helper.name_generator import GetRandomName
 from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo, TaskInfo
-from .utils import IosAccountHelper, publish_security_code, curl_parse_context, entry, get_capability
+from .utils import IosAccountHelper, publish_security_code, curl_parse_context, get_capability
 
 
 def _reg_app(_config: IosAccountInfo, project: str, app_id_id: str, name: str, prefix: str, identifier: str):
@@ -533,13 +534,12 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
         return {
             "succ": False,
         }
-    for _user in UserInfo.objects.filter(udid=udid):
+    for _user in UserInfo.objects.filter(udid=udid, project=_detail["project"]):
         _account = _user.account
-        if _user.project == _detail["project"]:
-            if uuid != _user.uuid:
-                Log("转移设备的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
-                uuid = _user.uuid
-                break
+        if uuid != _user.uuid:
+            Log("转移设备的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
+            uuid = _user.uuid
+            break
 
     if not _account:
         Log("为设备[%s]分配账号" % udid)
@@ -552,13 +552,8 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     _user.project = _detail["project"]
     _user.account = _account.account
     _user.save()
-    if test_env():
-        # 测试环境可能uuid要重复测
-        pass
-    else:
-        db_session.delete(_key)
     __add_task(_user)
-    return HttpResponsePermanentRedirect("https://iosstore.sklxsj.com/detail.php?project=%s&uuid=%s" % (project, uuid))
+    return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s" % (project, uuid)))
 
 
 @Action
@@ -714,16 +709,12 @@ def upload_ipa(worker: str, uuid: str, file: bytes):
     }
 
 
-def _asset_url(path):
-    return entry("/income/" + path)
-
-
 # noinspection PyShadowingNames
 @Action
 def download_ipa(uuid: str):
     _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
     _info = IosAccountInfo.objects.filter(account=_user.account).first()  # type:IosAccountInfo
-    return HttpResponseRedirect(_asset_url("%s/%s_%s.ipa" % (_user.project, _info.team_id, _info.devices_num)))
+    return HttpResponseRedirect(static_entry("/income/%s/%s_%s.ipa" % (_user.project, _info.team_id, _info.devices_num)))
 
 
 @Action
@@ -746,7 +737,7 @@ def manifest(uuid: str):
                         <key>kind</key>
                         <string>software-package</string>
                         <key>url</key>
-                        <string>https://static_iosstore.sklxsj.com/income/%(project)s/%(filename)s</string>
+                        <string>%(url)s</string>
                     </dict>
                     <dict>
                         <key>kind</key>
@@ -777,13 +768,12 @@ def manifest(uuid: str):
     </dict>
 </plist>
 """ % {
+        "url": static_entry("/income/%s/%s_%s.ipa") % (_project.project, _account.team_id, _account.devices_num),
         "uuid": uuid,
         "title": _comments["name"],
         "icon": _comments["icon"],
         "app": _app.identifier,
         "version": "1.0.0",
-        "project": _project.project,
-        "filename": "%s_%s.ipa" % (_account.team_id, _account.devices_num)
     }
     response = HttpResponse(content)
     response['Content-Type'] = 'application/octet-stream; charset=utf-8'
@@ -810,7 +800,7 @@ def mobconf(uuid: str = ""):
     下载config实现udid的上传
     """
     if uuid:
-        orig = read_binary_file("mdmtools/mdm.mobileconfig").replace(b"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", uuid.encode("utf8"))
+        orig = read_binary_file("mdmtools/mdm.mobileconfig").replace(b"#url#", entry("/apple/add_device?uuid=%s" % uuid).encode("utf8"))
         _, in_path = tempfile.mkstemp()
         _, out_path = tempfile.mkstemp()
         try:

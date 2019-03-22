@@ -132,7 +132,8 @@
                             <div data-ios-installing="1" auto-open="0" id="ios-installing" style="border-color: darkgray;display: none">
                                 <div class="invert_btn_txt">安装</div>
                             </div>
-                            <div>正在授权应用 <span id="install_tips_progress">0%</span> <span style="color: #0070c9;">请等待授权完成</span></div>
+                            <div id="step2">正在授权应用 <span id="install_tips_progress">0%</span> <span style="color: #0070c9;">请等待授权完成</span>
+                            </div>
                         </li>
                         <a id="trylink" href="#app_scheme#" style="width: 0px;display: none;"></a>
                         <!-- <li id="showhelp" class="ios-app-install-btn" style="width: 28px;position: relative;float: right;top: 0px;right: 10px;display: none;" onclick="document.all['pagemask'].style.display='block';document.body.style.height='100%';document.body.style.overflow='hidden';this.style.backgroundColor='darkgray';this.style.borderColor='darkgray';$('#moremenu').addClass('showmore_anim');">?</li> -->
@@ -404,7 +405,8 @@ require.resourceMap({
                     start_download();
                 } else {
                     // 等待用户自己点击开始
-                    $('#ios-download').attr('s1', uuid);
+                    $("#ios-download").attr('s1', uuid);
+                    $("#step2").hide();
                 }
             }
         });
@@ -529,7 +531,7 @@ require.resourceMap({
 
     function install_will_ok() {
         // todo: 更新history
-        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("https://iosstore.sklxsj.com/apple/manifest?uuid=" + uuid);
+        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("http://" + window.location.host + "/apple/manifest?uuid=" + uuid);
         $('#ios-installing').css('width', 'auto');
         $('#ios-installing div').css('font-size', '12px').css('width', '154px').text("准备安装");
         $('#install_btn_container').removeClass('install-btn-container-loading');

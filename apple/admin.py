@@ -2,12 +2,11 @@
 from datetime import datetime
 
 from django.contrib import admin
-from django.core.checks import messages
 from django.utils.html import format_html
 
-from apple.models import IosProjectInfo, IosAccountInfo, TaskInfo, IosProfileInfo
+from apple.models import IosProjectInfo, IosAccountInfo, TaskInfo, IosProfileInfo, UserInfo
 from apple.views import init_account, rebuild
-from base.style import str_json_i
+from frameworks.utils import static_entry
 
 admin.site.site_title = "打包后台"
 admin.site.site_header = "打包后台"
@@ -18,8 +17,8 @@ admin.site.index_title = "打包后台"
 @admin.register(IosProjectInfo)
 class IosProjectInfoAdmin(admin.ModelAdmin):
     list_display_links = ['project']
-    list_display = ('project', 'bundle_prefix', 'human_md5sum')
-    list_editable = ['bundle_prefix']
+    list_display = ('project', 'bundle_prefix', 'human_md5sum', 'human_task', 'human_download')
+    list_editable = []
     search_fields = ('project',)
     fieldsets = (
         ['基本信息', {
@@ -31,23 +30,23 @@ class IosProjectInfoAdmin(admin.ModelAdmin):
         }]
     )
 
+    def human_download(self, _info):
+        return """\
+<a href="%s">下载ipa</a>
+""" % static_entry("/projects/%s/orig.ipa" % _info.project)
+
+    def human_task(self, _info: IosProjectInfo):
+        return UserInfo.objects.filter(project=_info.project).count()
+
+    human_task.short_description = "下载量"
+
     def human_md5sum(self, _info: IosProjectInfo):
         if _info.md5sum:
-            return "已提交"
+            return "原始ipa已提交"
         else:
-            return "尚未提交"
+            return "原始ipa尚未提交"
 
-    human_md5sum.short_description = "状态"
-
-    def save_model(self, request, obj, form, change):
-        if not change:
-            obj.sid = form.data["project"]
-            obj.save()
-        else:
-            if not str_json_i(form.data["comments"]):
-                self.message_user(request, "json格式错误", level=messages.ERROR)
-                return
-            super().save_model(request, obj, form, change)
+    human_md5sum.short_description = "项目状态"
 
 
 @admin.register(IosAccountInfo)
@@ -70,7 +69,10 @@ class IosAccountInfoAdmin(admin.ModelAdmin):
     # noinspection PyUnusedLocal
     def init_project(self, request, queryset):
         _info = queryset.first()  # type: IosAccountInfo
-        init_account({"account": _info.account})
+        # noinspection PyTypeChecker
+        init_account({
+            "account": _info.account
+        })
         self.message_user(request, "执行完毕")
 
     init_project.short_description = "账号初始化"

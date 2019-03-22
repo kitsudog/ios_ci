@@ -13,6 +13,9 @@ import os
 
 from celery.schedules import crontab
 
+from apple.utils import static_entry
+from base.style import Log
+
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "127.0.0.1")
 RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT", 5672)
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "admin")
@@ -51,20 +54,6 @@ SECRET_KEY = 'wv2(!kf*fhkuv6dxn^1c9=g-ef_8$&(17^*g=26g(t7_lmebby'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(os.environ.get("DEBUG", False))
 
-
-
-def _valid_host(src: str):
-    ret = []
-    for each in src.split(","):
-        host, _, port = each.rpartition(":")
-        if host:
-            ret.append(host)
-            ret.append(each)
-        else:
-            ret.append(each)
-    return ret
-
-
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"] if DEBUG else _valid_host(os.environ.get("VIRTUAL_HOST", "www.baidu.com"))
 
 # Application definition
@@ -80,22 +69,23 @@ INSTALLED_APPS = [
     'apple',
 ]
 
-# noinspection PyBroadException
-try:
-    import suit
-    from suit.apps import DjangoSuitConfig
+if os.environ.get("NO_SUIT", "FALSE") == "FALSE":
+    # noinspection PyBroadException
+    try:
+        import suit
+        from suit.apps import DjangoSuitConfig
 
-    assert suit.VERSION.startswith("2."), "早期的版本不支持"
-
-
-    class SuitConfig(DjangoSuitConfig):
-        layout = 'vertical'
+        assert suit.VERSION.startswith("2."), "早期的版本不支持"
 
 
-    INSTALLED_APPS.insert(0, "ios_ci.settings.SuitConfig")
-    # INSTALLED_APPS.insert(0, "suit")
-except Exception as e:
-    pass
+        class SuitConfig(DjangoSuitConfig):
+            layout = 'vertical'
+
+
+        INSTALLED_APPS.insert(0, "ios_ci.settings.SuitConfig")
+        # INSTALLED_APPS.insert(0, "suit")
+    except Exception as e:
+        Log("开启suit失败")
 
 MIDDLEWARE = [
     # 'django.middleware.security.SecurityMiddleware',
@@ -232,5 +222,6 @@ SUIT_CONFIG = {
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
-STATIC_URL = '/static/' if DEBUG else '//static_iosstore.sklxsj.com/'
+
+STATIC_URL = '/static/' if DEBUG else static_entry("/", follow_proto=True)
 STATIC_ROOT = 'static' if DEBUG else '/var/www/html'

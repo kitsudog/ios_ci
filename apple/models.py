@@ -2,8 +2,8 @@ from datetime import datetime
 
 from django.db import models
 
-
 # Create your models here.
+from core.models import validate_json
 
 
 class IosAccountInfo(models.Model):
@@ -16,17 +16,17 @@ class IosAccountInfo(models.Model):
         db_table = "ios_account_info"
         verbose_name_plural = '账号'
 
-    account = models.CharField("账号名", max_length=128, primary_key=True)
+    account = models.EmailField("账号名", max_length=128, primary_key=True)
     password = models.CharField("密码", max_length=128)
     teams = models.CharField("所有分组", max_length=128)
     team_id = models.CharField("当前分组", max_length=128, db_index=True)
-    cookie = models.TextField("当前cookie", default="{}")
-    headers = models.CharField(max_length=1024, default="{}")
+    cookie = models.TextField("当前cookie", default="{}", editable=False, validators=[validate_json])
+    headers = models.CharField(max_length=1024, default="{}", editable=False, validators=[validate_json])
     csrf = models.CharField(max_length=128)
     csrf_ts = models.BigIntegerField(default=0)
-    devices = models.TextField("当前设备", default="{}")
-    devices_num = models.IntegerField("设备数", default=0)
-    phone = models.CharField("绑定手机", max_length=128, default="", help_text="二次验证用的")
+    devices = models.TextField("当前设备", default="{}", editable=False, validators=[validate_json])
+    devices_num = models.IntegerField("设备数", default=0, editable=False)
+    phone = models.CharField("绑定手机", max_length=128, blank=True, help_text="二次验证用的")
 
 
 class IosDeviceInfo(models.Model):
@@ -120,7 +120,7 @@ class IosProjectInfo(models.Model):
     bundle_prefix = models.CharField("bundle_id前缀", max_length=128, help_text="用于生成各个app用的")
     md5sum = models.CharField("项目md5sum", max_length=128, help_text="原始ipa的md5")
     capability = models.CharField("项目权限", max_length=1024, default='["GAME_CENTER", "IN_APP_PURCHASE"]', help_text="原始的权限")
-    comments = models.CharField("备注信息", max_length=2048, default="{}")
+    comments = models.CharField("备注信息", max_length=2048, default="{}", validators=[validate_json])
 
 
 class UserInfo(models.Model):

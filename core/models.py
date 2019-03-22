@@ -1,4 +1,8 @@
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+from base.style import str_json
 
 
 class CreateField:
@@ -11,6 +15,13 @@ class StrId:
 
 class IntId:
     id = models.BigAutoField(primary_key=True, db_column='id')
+
+
+def validate_json(value: str):
+    try:
+        str_json(value)
+    except ValueError:
+        raise ValidationError(_('不合法的json字符串'), code='invalid')
 
 # # Create your models here.
 # class OrderNode(StrIdNode, CreateField):
