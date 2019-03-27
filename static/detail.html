@@ -531,6 +531,8 @@ require.resourceMap({
     }
 
     function install_will_ok() {
+        $("#installUDID").remove();
+        $('#step2').hide();
         // todo: 更新history
         var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("https://" + window.location.host + "/apple/manifest?uuid=" + uuid);
         $('#ios-installing').css('width', 'auto');

@@ -9,11 +9,11 @@ from typing import Dict, List, Callable
 
 import gevent
 import requests
-from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse
+from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse, StreamingHttpResponse
 
 from apple.tasks import resign_ipa
 from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug
-from base.utils import base64decode, md5bytes, base64, read_binary_file
+from base.utils import base64decode, md5bytes, base64, read_binary_file, random_str
 from frameworks.base import Action
 from frameworks.db import db_session, message_from_topic
 from frameworks.utils import entry, static_entry
@@ -711,16 +711,51 @@ def upload_ipa(worker: str, uuid: str, file: bytes):
     }
 
 
+__download_total = {
+
+}
+
+__download_process = {
+
+}
+
+
 # noinspection PyShadowingNames
 @Action
-def download_ipa(uuid: str):
+def download_ipa(uuid: str, redirect: bool = False, download_id: str = ""):
     _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
     _info = IosAccountInfo.objects.filter(account=_user.account).first()  # type:IosAccountInfo
-    return HttpResponseRedirect(static_entry("/income/%s/%s_%s.ipa" % (_user.project, _info.team_id, _info.devices_num)))
+
+    filepath = "income/%s/%s_%s.ipa" % (_user.project, _info.team_id, _info.devices_num)
+    if redirect:
+        return HttpResponseRedirect(static_entry(filepath))
+    else:
+        if not download_id:
+            download_id = random_str(32)
+        __download_process[download_id] = 0
+        __download_total[download_id] = os.path.getsize(os.path.join("static", filepath))
+
+        def file_iterator(chunk_size=4 * 1024):
+            with open(os.path.join("static", filepath), mode="rb") as fin:
+                num = 0
+                while True:
+                    # todo: 不允许相同的多个下载任务
+
+                    c = fin.read(chunk_size)
+                    num += len(c)
+                    __download_process[download_id] = num
+                    if c:
+                        yield c
+                    else:
+                        break
+
+        rsp = StreamingHttpResponse(file_iterator())
+        rsp.set_signed_cookie("download_id", download_id, salt="zhihu")
+        return rsp
 
 
 @Action
-def manifest(uuid: str):
+def manifest(uuid: str, need_process=True):
     _user = UserInfo.objects.get(uuid=uuid)
     _account = IosAccountInfo.objects.get(account=_user.account)
     _project = IosProjectInfo.objects.get(project=_user.project)
@@ -770,7 +805,8 @@ def manifest(uuid: str):
     </dict>
 </plist>
 """ % {
-        "url": static_entry("/income/%s/%s_%s.ipa") % (_project.project, _account.team_id, _account.devices_num),
+        "url": static_entry("/income/%s/%s_%s.ipa") % (_project.project, _account.team_id, _account.devices_num)
+        if not need_process else entry("/apple/download_ipa?uuid=%s&download_id=%s" % (uuid, random_str())),
         "uuid": uuid,
         "title": _comments["name"],
         "icon": _comments["icon"],
@@ -957,12 +993,12 @@ def task_state(uuid: str, worker: str = "", state: str = "", auto_start=True):
 
 
 @Action
-def download_process(uuid: str):
-    _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
+def download_process(_req: HttpRequest):
+    download_id = _req.get_signed_cookie("download_id", "", salt="zhihu")
     return {
         "code": 0,
-        "progress": _task.size * 0.3,
-        "total": _task.size,
+        "progress": __download_process.get(download_id, 0),
+        "total": __download_total.get(download_id, 1),
     }
 
 

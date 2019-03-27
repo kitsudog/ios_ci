@@ -10,7 +10,7 @@ from base.utils import str_to_bool, DecorateHelper
 
 
 def get_data(value: str, hint_type: Type, default_value: any = None) -> any:
-    if hint_type is bool:
+    if hint_type in {bool, True, False}:
         return str_to_bool(value)
     return value
 
