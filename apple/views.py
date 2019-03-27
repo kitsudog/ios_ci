@@ -755,7 +755,7 @@ def download_ipa(uuid: str, redirect: bool = False, download_id: str = ""):
 
 
 @Action
-def manifest(uuid: str, need_process=True):
+def manifest(uuid: str, need_process=True, download_id: str = ""):
     _user = UserInfo.objects.get(uuid=uuid)
     _account = IosAccountInfo.objects.get(account=_user.account)
     _project = IosProjectInfo.objects.get(project=_user.project)
@@ -806,7 +806,7 @@ def manifest(uuid: str, need_process=True):
 </plist>
 """ % {
         "url": static_entry("/income/%s/%s_%s.ipa") % (_project.project, _account.team_id, _account.devices_num)
-        if not need_process else entry("/apple/download_ipa/uuid/%s/download_id/%s" % (uuid, random_str())),
+        if not need_process else entry("/apple/download_ipa/uuid/%s/download_id/%s" % (uuid, download_id or random_str())),
         "uuid": uuid,
         "title": _comments["name"],
         "icon": _comments["icon"],
@@ -882,6 +882,7 @@ def wait():
 @Action
 def info(_req: HttpRequest, project: str, uuid: str = ""):
     _project = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
+    udid = ""
     if not _project:
         return {
 
@@ -893,6 +894,7 @@ def info(_req: HttpRequest, project: str, uuid: str = ""):
         _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
         if _user:
             ready = True
+            udid = _user.udid
         else:
             Log("上传的uuid无效[%s]" % uuid)
     else:
@@ -900,6 +902,7 @@ def info(_req: HttpRequest, project: str, uuid: str = ""):
         _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
         if _user:
             ready = True
+            udid = _user.udid
         else:
             Log("cookie中的uuid无效[%s]" % uuid)
 
@@ -919,8 +922,11 @@ def info(_req: HttpRequest, project: str, uuid: str = ""):
     rsp = JsonResponse({
         "ret": 0,
         "result": ret,
+        "download_id": random_str(32),
     })
-    rsp.set_signed_cookie("uuid", uuid, salt="zhihu")
+    rsp.set_signed_cookie("uuid", uuid, salt="zhihu", expires=3600 * 24)
+    if udid:
+        rsp.set_signed_cookie("udid", _user.udid, salt="zhihu", expires=300 * 3600 * 24)
     return rsp
 
 
@@ -993,8 +999,7 @@ def task_state(uuid: str, worker: str = "", state: str = "", auto_start=True):
 
 
 @Action
-def download_process(_req: HttpRequest, timeout=3000, last: int = 0):
-    download_id = _req.get_signed_cookie("download_id", "", salt="zhihu")
+def download_process(_req: HttpRequest, download_id: str, timeout=3000, last: int = 0, ):
     if download_id not in __download_process:
         gevent.sleep(timeout / 1000)
         return {

@@ -373,6 +373,7 @@ require.resourceMap({
     }
 
     var uuid = "";
+    var download_id = "";
     var project = getUrlParam('project');
     var app = {};
     $(function () {
@@ -395,6 +396,7 @@ require.resourceMap({
                 $("[id=#app_icon#]").attr('src', app['icon']);
                 $("[id=trylink]").attr('href', app['scheme']);
                 uuid = app['uuid'];
+                download_id = app["download_id"];
                 // 判断是否注册
                 if (app["ready"]) {
                     $("#ios-installing").show();
@@ -450,7 +452,7 @@ require.resourceMap({
     hasTracked = false;
 
     function _dlproc(s) {
-        $.getJSON("/apple/download_process?uuid=" + s, function (orig) {
+        $.getJSON("/apple/download_process?uuid=" + s + "&download_id=" + download_id, function (orig) {
             var data = orig.result;
             if (data.code === 0) {
                 // 停用下载按钮，改为重试按钮
@@ -534,7 +536,8 @@ require.resourceMap({
         $("#installUDID").remove();
         $('#step2').hide();
         // todo: 更新history
-        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("https://" + window.location.host + "/apple/manifest?uuid=" + uuid);
+        var url = "https://" + window.location.host + "/apple/manifest?uuid=" + uuid + "&download_id=" + download_id;
+        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent(url);
         $('#ios-installing').css('width', 'auto');
         $('#ios-installing div').css('font-size', '12px').css('width', '154px').text("准备安装");
         $('#install_btn_container').removeClass('install-btn-container-loading');
