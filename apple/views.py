@@ -910,6 +910,11 @@ def info(_req: HttpRequest, project: str, uuid: str = ""):
         ret.update({
             "ready": True,
         })
+        _task = TaskInfo.objects.filter(uuid=uuid).first()  # type:TaskInfo
+        if _task:
+            if _task.state == "fail" or _task.expire.timestamp() * 1000 < now():
+                __add_task(_user)
+
     else:
         uuid = _newbee(_project)
         ret.update({

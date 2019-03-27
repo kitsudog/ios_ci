@@ -7,11 +7,13 @@ from typing import Dict, Union
 
 import gevent
 import requests
+from requests import Timeout
 
 from base.style import str_json, now, to_form_url, Assert, Log, json_str, Fail, str_json_i, Block
 from base.utils import base64, base64decode
 from frameworks.db import db_session, message_from_topic
 # noinspection PyProtectedMember
+from frameworks.utils import DbLock
 from .models import IosAccountInfo
 
 
@@ -156,16 +158,23 @@ class IosAccountHelper:
             if ex_headers:
                 headers.update(ex_headers)
             if rsp_str == "#NODATA#":
-                if method.upper() == "GET":
-                    rsp = requests.get(url, params=data, headers=headers, timeout=3, verify=False)
-                else:
-                    rsp = requests.post(url, data=data, headers=headers, timeout=3, verify=False)
-
-                rsp_str = rsp.text
-                if rsp.headers.get("csrf"):
-                    self.csrf = rsp.headers["csrf"]
-                    self.csrf_ts = int(rsp.headers["csrf_ts"])
-                Assert(rsp.status_code == status, "请求[%s]异常[%s]" % (title, rsp.status_code))
+                cnt = 3
+                rsp = None
+                while cnt >= 0:
+                    cnt -= 1
+                    try:
+                        if method.upper() == "GET":
+                            rsp = requests.get(url, params=data, headers=headers, timeout=3, verify=False)
+                        else:
+                            rsp = requests.post(url, data=data, headers=headers, timeout=3, verify=False)
+                        if rsp.headers.get("csrf"):
+                            self.csrf = rsp.headers["csrf"]
+                            self.csrf_ts = int(rsp.headers["csrf_ts"])
+                        rsp_str = rsp.text
+                        Assert(rsp.status_code == status, "请求[%s]异常[%s]" % (title, rsp.status_code))
+                    except Timeout:
+                        Log("apple请求[%s][%s]发送[%r]超时剩余尝试[%s]" % (title, now() - start, data, cnt))
+                Assert(cnt > 0 and rsp is not None, "apple请求[%s][%s]发送[%r]超时多次失败" % (title, now() - start, data))
                 if json_api:
                     _data = str_json_i(rsp_str) or {}
                     if _data.get("resultCode") == 1100:
@@ -212,7 +221,7 @@ class IosAccountHelper:
     def __login(self):
         if self.csrf_ts > now():
             return
-        with Block("账号登录"):
+        with Block("账号登录", lock=DbLock("登录%s" % self.account)):
             ret = requests.post(
                 "https://developer.apple.com/services-account/QH65B2/account/getTeams",
                 json={

@@ -258,7 +258,11 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
         Log("开始打包[%s]" % project)
         file_new = os.path.join("package", project, ipa_new)
         _update_state(process_url, worker, "resign")
-        _package(file_ipa, file_mp, cert, file_new)
+        # noinspection PyBroadException
+        try:
+            _package(file_ipa, file_mp, cert, file_new)
+        except Exception:
+            _update_state(process_url, worker, "fail")
 
     with Block("上传"):
         _update_state(process_url, worker, "upload_ipa")
