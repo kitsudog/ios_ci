@@ -172,6 +172,7 @@ class IosAccountHelper:
                             self.csrf_ts = int(rsp.headers["csrf_ts"])
                         rsp_str = rsp.text
                         Assert(rsp.status_code == status, "请求[%s]异常[%s]" % (title, rsp.status_code))
+                        break
                     except Timeout:
                         Log("apple请求[%s][%s]发送[%r]超时剩余尝试[%s]" % (title, now() - start, data, cnt))
                 Assert(cnt > 0 and rsp is not None, "apple请求[%s][%s]发送[%r]超时多次失败" % (title, now() - start, data))
@@ -233,6 +234,13 @@ class IosAccountHelper:
             if ret.get("resultCode") == 0:
                 self.teams = list(map(lambda x: x["teamId"], ret["teams"]))
                 self.info.team_id = self.team_id = self.teams[0]
+                self.info.team_member_id = ret["teams"][0]["teamMemberId"]
+                if len(self.teams) > 1:
+                    for team in ret["teams"]:
+                        if "Account Holder" in team["userRoles"]:
+                            # 优先选择自己的team
+                            self.info.team_id = self.team_id = team["teamId"]
+                            self.info.team_member_id = team["teamMemberId"]
                 self.info.teams = json_str(self.teams)
                 self.info.save()
             else:

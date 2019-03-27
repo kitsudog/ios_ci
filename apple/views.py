@@ -13,7 +13,7 @@ from OpenSSL import crypto
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse, StreamingHttpResponse
 
 from apple.tasks import resign_ipa, print_hello
-from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug
+from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug, str_json_a
 from base.utils import base64decode, md5bytes, base64, read_binary_file, random_str
 from frameworks.base import Action
 from frameworks.db import db_session, message_from_topic
@@ -34,14 +34,14 @@ def _reg_app(_config: IosAccountInfo, project: str, app_id_id: str, name: str, p
     _info.prefix = prefix
     _info.create = now()
     _info.save()
-    Log("注册新的app[%s][%s][%s]" % (_config.account, app_id_id, identifier))
+    Log("更新app[%s][%s][%s]" % (_config.account, app_id_id, identifier))
 
 
 def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str, expire):
-    sid = "%s:%s" % (_config.account, name)
+    sid = "%s:%s" % (_config.account, cert_id)
     _info = IosCertInfo()
     _info.sid = sid
-    _info.app = _config.account
+    _info.account = _config.account
     _info.cert_req_id = cert_req_id
     _info.cert_id = cert_id
     _info.sn = sn
@@ -50,7 +50,7 @@ def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str,
     _info.create = now()
     _info.expire = datetime.datetime.utcfromtimestamp(expire // 1000)
     _info.save()
-    Log("注册新的证书[%s][%s]" % (name, cert_req_id))
+    Log("更新证书[%s][%s]" % (name, cert_req_id))
     return cert_req_id
 
 
@@ -208,6 +208,12 @@ def __profile_detail(_config: IosAccountHelper, _profile: IosProfileInfo):
         __download_profile(_config, _profile)
         Log("更新profile[%s]" % _profile.sid)
         _profile.save()
+    certs = []
+    for each in profile["certificates"]:
+        certs.append(each["certificateId"])
+    if _profile.certs != json_str(certs):
+        _profile.certs = json_str(certs)
+        _profile.save()
 
 
 def __list_all_profile(_config: IosAccountHelper, target_project: str = ""):
@@ -271,7 +277,7 @@ def __list_all_cert(_config: IosAccountHelper):
         _reg_cert(
             _config.info,
             cert["certRequestId"],
-            cert["name"],
+            "%s (%s)" % (cert["name"], cert["ownerId"]),
             cert["certificateId"],
             cert["serialNum"],
             cert["certificateType"]["permissionType"],
@@ -495,9 +501,10 @@ def __add_task(_user: UserInfo):
     _account = IosAccountInfo.objects.get(account=_user.account)
     _project = IosProjectInfo.objects.get(project=_user.project)
     _profile = IosProfileInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
-    _cert = IosCertInfo.objects.get(app=_user.account)
+    _cert = IosCertInfo.objects.get(sid="%s:%s" % (_user.account, str_json_a(_profile.certs)[0]))
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
+    Assert(_cert.cert_p12, "项目[%s]p12还没上传" % _project.project)
     Log("[%s]发布任务[%s]" % (_user.project, _user.account))
     _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
     _task.state = "none"
@@ -505,7 +512,7 @@ def __add_task(_user: UserInfo):
     _task.save()
     resign_ipa.delay(**{
         "uuid": _user.uuid,
-        "cert": "iPhone Developer: zhangming luo",
+        "cert": "iPhone Developer: %s" % _cert.name,
         "cert_url": entry("/apple/download_cert?uuid=%s" % _user.uuid),
         "cert_md5": md5bytes(base64decode(_cert.cert_p12)),
         "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
@@ -611,7 +618,7 @@ def login_by_fastlane(_req: HttpRequest, cmd: str = "", account: str = ""):
 def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
     """
     通过拦截网页的curl 请求
-    https://developer.apple.com/account/getUserProfile
+    https://developer.apple.com/account
     ex.
     curl 'https://developer.apple.com/services-account/QH65B2/account/getUserProfile' -H 'origin: https://developer.apple.com' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: zh-CN,zh;q=0.9' -H 'csrf: cf0796aee015fe0f03e7ccc656ba4b898b696cc1072027988d89b1f6e607fd67' -H 'cookie: geo=SG; ccl=SR+vWVA/vYTrzR1LkZE2tw==; s_fid=56EE3E795513A2B4-16F81B5466B36881; s_cc=true; s_vi=[CS]v1|2E425B0B852E2C90-40002C5160000006[CE]; dslang=CN-ZH; site=CHN; s_pathLength=developer%3D2%2C; acn01=v+zxzKnMyleYWzjWuNuW1Y9+kAJBxfozY2UAH0paNQB+FA==; myacinfo=DAWTKNV2a5c238e8d27e8ed221c8978cfb02ea94b22777f25ffec5abb1a855da8debe4f59d60b506eae457dec4670d5ca9663ed72c3d1976a9f87c53653fae7c63699abe64991180d7c107c50ce88be233047fc96de200c3f23947bfbf2e064c7b9a7652002d285127345fe15adf53bab3d347704cbc0a8b856338680722e5d0387a5eb763d258cf19b79318be28c4abd01e27029d2ef26a1bd0dff61d141380a1b496b92825575735d0be3dd02a934db2d788c9d6532b6a36bc69d244cc9b4873cef8f4a3a90695f172f6f521330f67f20791fd7d62dfc9d6de43899ec26a8485191d62e2c5139f81fca2388d57374ff31f9f689ad373508bcd74975ddd3d3b7875fe3235323962636433633833653433363562313034383164333833643736393763303538353038396439MVRYV2; DSESSIONID=1c3smahkpfbkp7k3fju30279uoba8p8480gs5ajjgsbbvn8lubqt; s_sq=%5B%5BB%5D%5D' -H 'user-locale: en_US' -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.81 Safari/537.36 QQBrowser/4.5.122.400' -H 'content-type: application/json' -H 'accept: application/json' -H 'cache-control: max-age=0, no-cache, no-store, must-revalidate, proxy-revalidate' -H 'authority: developer.apple.com' -H 'referer: https://developer.apple.com/account/' -H 'csrf_ts: 1552204197631' --data-binary '{}' --compressed
     """
@@ -640,13 +647,11 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
             "succ": False,
             "reason": "无效的curl",
         }
-    if parsed_context.url != "https://developer.apple.com/services-account/QH65B2/account/getUserProfile":
+    if parsed_context.url == "https://developer.apple.com/services-account/QH65B2/account/getUserProfile":
         data = rsp.json()
         account = data["userProfile"]["email"]
     else:
-        rsp = requests.post("https://developer.apple.com/services-account/QH65B2/account/getUserProfile", headers={
-            "cookie": parsed_context.cookies,
-        })
+        rsp = requests.post("https://developer.apple.com/services-account/QH65B2/account/getUserProfile", cookies=parsed_context.cookies)
         data = rsp.json()
         account = data["userProfile"]["email"]
 
