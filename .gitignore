@@ -19,3 +19,4 @@ gen
 /static/packages/
 /tools/dist/
 /tools/build/
+/static/certs/

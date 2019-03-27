@@ -23,6 +23,7 @@ django-suit = {file = "https://github.com/darklow/django-suit/tarball/v2"}
 flower = "*"
 redis = "*"
 celery = ">=4"
+pyopenssl = "*"
 
 [requires]
 python_version = "3.6"

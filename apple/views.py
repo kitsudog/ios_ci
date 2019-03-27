@@ -9,9 +9,10 @@ from typing import Dict, List, Callable
 
 import gevent
 import requests
+from OpenSSL import crypto
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse, StreamingHttpResponse
 
-from apple.tasks import resign_ipa
+from apple.tasks import resign_ipa, print_hello
 from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug
 from base.utils import base64decode, md5bytes, base64, read_binary_file, random_str
 from frameworks.base import Action
@@ -687,6 +688,20 @@ def upload_project_ipa(project: str, file: bytes):
 
 
 @Action
+def upload_cert_p12(account: str, file: bytes, password: str = "q1w2e3r4"):
+    p12 = crypto.load_pkcs12(file, password)
+    name = re.match(r"iPhone Developer: (.+) \([A-Z0-9]+\)", p12.get_friendlyname().decode("utf8")).groups()
+    Assert(len(name), "非法的p12文件")
+    name = name[0]  # type: str
+    _cert = IosCertInfo.objects.get(sid="%s:%s" % (account, name))
+    _cert.cert_p12 = base64(file)
+    _cert.save()
+    return {
+        "succ": True,
+    }
+
+
+@Action
 def upload_ipa(worker: str, uuid: str, file: bytes):
     _user = UserInfo.objects.get(uuid=uuid)
     project = _user.project
@@ -1001,6 +1016,11 @@ def task_state(uuid: str, worker: str = "", state: str = "", auto_start=True):
             "finished": _task.state == "succ",
             "progress": "%d%%" % ((_states.index(_task.state) + 1) * 100 / len(_states)) if _task.state in _states else "0%",
         }
+
+
+@Action
+def test():
+    print_hello.delay()
 
 
 @Action

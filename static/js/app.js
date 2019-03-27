@@ -80,11 +80,11 @@ define('components/udid/udid', function (require, exports, module) {
                 return _popup2['default'].autoTip("该应用只支持iOS,需在iOS设备-Safari中访问及安装");
             }
             if (!G.platform.isSafari) {
-                if (G.platform.isWeiXin) {
+                if (G.platform.isWeiXin || G.platform.isQQ) {
                     return _popup2['default'].dialog.create('<div class="wechat-tip"></div>').show();
                     // return _popup2['default'].autoTip("请点击右上角在safari中打开");
                 } else {
-                    var safariTipsHtml = '<div class="pop-dialog-confirm pop-dialog-white popup-template pop-dialog"><div class="popup-template-banner">\n<img src="img/safari-tip_banner.jpg" alt="">\n</div>\n<div class="popup-template-safari">\n<input type="text" name="" value="'+window.location.href+'">\n<button type="button" class="safari-copy" name="button" data-clipboard-text="'+window.location.href+'&from=copy" onclick="$.ajax('+"'https://www.itunesappstore.cn/statistics/copyurl'"+')">复制</button>\n</div>\n</div>';
+                    var safariTipsHtml = '<div class="pop-dialog-confirm pop-dialog-white popup-template pop-dialog"><div class="popup-template-banner">\n<img src="img/safari-tip_banner.jpg" alt="">\n</div>\n<div class="popup-template-safari">\n<input type="text" name="" value="'+window.location.href+'">\n<button type="button" class="safari-copy" name="button" data-clipboard-text="'+window.location.href+'&from=copy" onclick="$.ajax('+"''"+')">复制</button>\n</div>\n</div>';
                     _popup2['default'].dialog.create(safariTipsHtml).show();
                     var y = require("components/clipboard"),
                             k = new y(".safari-copy");

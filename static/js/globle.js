@@ -1,6 +1,7 @@
 var _userAgent = navigator.userAgent;
 var platform = {
     isWeiXin: /MicroMessenger/i.test(_userAgent),
+    isQQ: /QQ/i.test(_userAgent),
     isMobile: /iphone|ipod|ipad|ipad|Android|nokia|blackberry|webos|webos|webmate|bada|lg|ucweb/i.test(_userAgent),
     isIos: /iPhone|iPad|iPod|iOS/i.test(_userAgent),
     isIphone: /iPhone/i.test(_userAgent),
