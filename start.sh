@@ -5,12 +5,12 @@ export LANG=en_US.UTF-8
 if [[ "${PASS_REQUIREMENTS:-FALSE}" == "FALSE" ]]
 then
     # 这个优化是给内网环境准备的
-    pip3.6 install --trusted-host mirrors.aliyun.com -i http://mirrors.aliyun.com/pypi/simple -r requirements.txt
+    python3.6 -m pip install --trusted-host mirrors.aliyun.com -i http://mirrors.aliyun.com/pypi/simple -r requirements.txt
 fi
 
 if [[ ! -x /usr/local/bin/uwsgi ]]
 then
-    pip3.6 install --trusted-host mirrors.aliyun.com -i http://mirrors.aliyun.com/pypi/simple -I uwsgi
+    python3.6 -m pip install --trusted-host mirrors.aliyun.com -i http://mirrors.aliyun.com/pypi/simple -I uwsgi
 fi
 
 python3.6 manage.py collectstatic --no-input

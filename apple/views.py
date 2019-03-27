@@ -492,9 +492,10 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
 
 
 def __add_task(_user: UserInfo):
-    _account = IosAccountInfo.objects.filter(account=_user.account).first()  # type:IosAccountInfo
-    _project = IosProjectInfo.objects.filter(project=_user.project).first()  # type:IosProjectInfo
-    _profile = IosProfileInfo.objects.filter(sid="%s:%s" % (_user.account, _user.project)).first()  # type:IosProfileInfo
+    _account = IosAccountInfo.objects.get(account=_user.account)
+    _project = IosProjectInfo.objects.get(project=_user.project)
+    _profile = IosProfileInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
+    _cert = IosCertInfo.objects.get(app=_user.account)
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
     Log("[%s]发布任务[%s]" % (_user.project, _user.account))
@@ -506,7 +507,7 @@ def __add_task(_user: UserInfo):
         "uuid": _user.uuid,
         "cert": "iPhone Developer: zhangming luo",
         "cert_url": entry("/apple/download_cert?uuid=%s" % _user.uuid),
-        "cert_md5": md5bytes(base64decode("")),
+        "cert_md5": md5bytes(base64decode(_cert.cert_p12)),
         "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
         "mp_md5": md5bytes(base64decode(_profile.profile)),
         "project": _project.project,

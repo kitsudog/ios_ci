@@ -11,7 +11,7 @@ import requests
 from celery import Task
 from celery.task import task
 
-from base.style import Log, Block, now
+from base.style import Log, Block, now, json_str
 from base.utils import read_binary_file, md5bytes
 
 
@@ -214,7 +214,7 @@ def _update_state(url: str, worker: str, state: str, fail=False):
 def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, mp_url, mp_md5, project, ipa_url, ipa_md5, ipa_new,
                upload_url, process_url: str):
     worker = self.request.hostname
-    Log("[%s]启动Celery任务[%s][%s]" % (worker, uuid, self.request.retries))
+    Log("[%s]启动Celery任务[%s][%s][%s]" % (worker, uuid, self.request.retries, json_str(self.request.kwargs)))
     base = tempfile.gettempdir()
     _update_state(process_url, worker, "ready")
     # 确认ipa
