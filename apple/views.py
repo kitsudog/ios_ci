@@ -800,7 +800,8 @@ def mobconf(uuid: str = ""):
     下载config实现udid的上传
     """
     if uuid:
-        orig = read_binary_file("mdmtools/mdm.mobileconfig").replace(b"#url#", entry("/apple/add_device?uuid=%s" % uuid).encode("utf8"))
+        _url = entry("/apple/add_device?uuid=%s" % uuid, proto="https")
+        orig = read_binary_file("mdmtools/mdm.mobileconfig").replace(b"#url#", _url.encode("utf8"))
         _, in_path = tempfile.mkstemp()
         _, out_path = tempfile.mkstemp()
         try:
