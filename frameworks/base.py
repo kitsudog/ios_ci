@@ -172,6 +172,11 @@ class Action(DjangoAction):
             if len(req.COOKIES):
                 for k, v in req.COOKIES.items():
                     orig_params["$c_%s" % k] = v
+            _path = req.path.split("/")
+            if len(_path) > 3:
+                # 基于路径的参数
+                for i in range(4, len(_path), 2):
+                    orig_params[_path[i - 1]] = _path[i]
             content_type = req.META.get("CONTENT_TYPE", "")
             if content_type.startswith('multipart'):
                 pass

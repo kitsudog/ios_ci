@@ -723,8 +723,8 @@ __download_process = {
 # noinspection PyShadowingNames
 @Action
 def download_ipa(uuid: str, redirect: bool = False, download_id: str = ""):
-    _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
-    _info = IosAccountInfo.objects.filter(account=_user.account).first()  # type:IosAccountInfo
+    _user = UserInfo.objects.get(uuid=uuid)
+    _info = IosAccountInfo.objects.get(account=_user.account)
 
     filepath = "income/%s/%s_%s.ipa" % (_user.project, _info.team_id, _info.devices_num)
     if redirect:
@@ -806,7 +806,7 @@ def manifest(uuid: str, need_process=True):
 </plist>
 """ % {
         "url": static_entry("/income/%s/%s_%s.ipa") % (_project.project, _account.team_id, _account.devices_num)
-        if not need_process else entry("/apple/download_ipa?uuid=%s&download_id=%s" % (uuid, random_str())),
+        if not need_process else entry("/apple/download_ipa/uuid/%s/download_id/%s" % (uuid, random_str())),
         "uuid": uuid,
         "title": _comments["name"],
         "icon": _comments["icon"],
