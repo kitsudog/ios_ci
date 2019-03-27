@@ -532,7 +532,7 @@ require.resourceMap({
 
     function install_will_ok() {
         // todo: 更新history
-        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("http://" + window.location.host + "/apple/manifest?uuid=" + uuid);
+        var manifest_url = "itms-services://?action=download-manifest&url=" + encodeURIComponent("https://" + window.location.host + "/apple/manifest?uuid=" + uuid);
         $('#ios-installing').css('width', 'auto');
         $('#ios-installing div').css('font-size', '12px').css('width', '154px').text("准备安装");
         $('#install_btn_container').removeClass('install-btn-container-loading');
