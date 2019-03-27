@@ -380,6 +380,7 @@ require.resourceMap({
             url: "/apple/info",
             data: {
                 project: project,
+                uuid: getUrlParam('uuid') || "",
             },
             complete: function (rsp) {
                 // 注入数据

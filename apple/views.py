@@ -312,7 +312,9 @@ def _newbee(_project: IosProjectInfo):
         if db_session.set("uuid:%s" % _uuid, json_str({
             "project": _project.project,
         }), ex=3600 * 24, nx=True):
+            Log("生成[%s]一个新的uuid[%s]" % (_project.project, _uuid))
             return str(_uuid)
+
     raise Fail("生成失败")
 
 
@@ -842,41 +844,48 @@ def wait():
 
 
 @Action
-def info(_req: HttpRequest, project: str):
+def info(_req: HttpRequest, project: str, uuid: str = ""):
     _project = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
-    if _project:
-        ret = str_json(_project.comments)
-        uuid = _req.get_signed_cookie("uuid", "", salt="zhihu")
-        ready = False
-        if uuid:
-            _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
-            if _user:
-                ready = True
-            else:
-                Log("一个无效的uuid[%s]" % uuid)
+    if not _project:
+        return {
 
-        if ready:
-            ret.update({
-                "ready": True,
-            })
+        }
+    ret = str_json(_project.comments)
+    ready = False
+
+    if uuid:
+        _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
+        if _user:
+            ready = True
         else:
-            uuid = _newbee(_project)
-            ret.update({
-                "ready": False,
-            })
+            Log("上传的uuid无效[%s]" % uuid)
+    else:
+        uuid = _req.get_signed_cookie("uuid", "", salt="zhihu")
+        _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
+        if _user:
+            ready = True
+        else:
+            Log("cookie中的uuid无效[%s]" % uuid)
 
+    if ready:
         ret.update({
-            "uuid": uuid,
+            "ready": True,
         })
-        rsp = JsonResponse({
-            "ret": 0,
-            "result": ret,
+    else:
+        uuid = _newbee(_project)
+        ret.update({
+            "ready": False,
         })
-        rsp.set_signed_cookie("uuid", uuid, salt="zhihu")
-        return rsp
-    return {
 
-    }
+    ret.update({
+        "uuid": uuid,
+    })
+    rsp = JsonResponse({
+        "ret": 0,
+        "result": ret,
+    })
+    rsp.set_signed_cookie("uuid", uuid, salt="zhihu")
+    return rsp
 
 
 @Action
