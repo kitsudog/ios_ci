@@ -993,13 +993,36 @@ def task_state(uuid: str, worker: str = "", state: str = "", auto_start=True):
 
 
 @Action
-def download_process(_req: HttpRequest):
+def download_process(_req: HttpRequest, timeout=3000, last: int = 0):
     download_id = _req.get_signed_cookie("download_id", "", salt="zhihu")
-    return {
-        "code": 0,
-        "progress": __download_process.get(download_id, 0),
-        "total": __download_total.get(download_id, 1),
-    }
+    if download_id not in __download_process:
+        gevent.sleep(timeout / 1000)
+        return {
+            "code": 0,
+            "progress": 0,
+            "total": 1,
+        }
+    else:
+        orig = last or __download_process[download_id]
+        total = __download_total[download_id]
+        if orig == total:
+            return {
+                "code": 0,
+                "progress": total,
+                "total": total,
+            }
+        expire = (now() + timeout) if timeout > 0 else (now() + 30 * 1000)
+        while now() < expire:
+            if __download_process[download_id] == orig:
+                gevent.sleep(1)
+            else:
+                # 进度有变化就马上回去
+                break
+        return {
+            "code": 0,
+            "progress": __download_process[download_id],
+            "total": total,
+        }
 
 
 if ide_debug():
