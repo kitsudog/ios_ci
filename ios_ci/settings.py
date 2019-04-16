@@ -121,19 +121,31 @@ WSGI_APPLICATION = 'ios_ci.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'db',
-        'USER': 'root',
-        # 'PASSWORD': '',
-        'HOST': os.environ.get('MYSQL_HOST', '127.0.0.1'),
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': 'SET default_storage_engine=INNODB;SET character_set_database=utf8;SET character_set_server=utf8;SET character_set_connection=utf8',
+if os.environ.get("SQLITE_FORCE", "FALSE") == "TRUE":
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, "database.db"),
+            'USER': '',
+            'PASSWORD': '',
+            'HOST': '',
+            'PORT': '',
         }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'db',
+            'USER': 'root',
+            # 'PASSWORD': '',
+            'HOST': os.environ.get('MYSQL_HOST', '127.0.0.1'),
+            'PORT': '3306',
+            'OPTIONS': {
+                'init_command': 'SET default_storage_engine=INNODB;SET character_set_database=utf8;SET character_set_server=utf8;SET character_set_connection=utf8',
+            }
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
