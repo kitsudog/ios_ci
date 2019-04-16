@@ -1,4 +1,5 @@
 import argparse
+import os
 import re
 import shlex
 from collections import OrderedDict, namedtuple
@@ -26,7 +27,13 @@ def _set_cache(url: str, data: Dict, content: str, expire: int):
 
 
 __pub = db_session.pubsub()
-__pub.subscribe("account:security:code")
+if __pub.connection:
+    __pub.subscribe("account:security:code")
+else:
+    if os.environ.get("REDIS_HOST"):
+        Fail("redis[%s:%s]没准备好" % (os.environ.get("REDIS_HOST"), os.environ.get("REDIS_PORT")))
+    else:
+        pass
 
 
 def publish_security_code(account: str, code: str, ts: int):
