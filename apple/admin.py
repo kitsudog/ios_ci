@@ -22,7 +22,7 @@ class IosProjectInfoAdmin(admin.ModelAdmin):
     search_fields = ('project',)
     fieldsets = (
         ['基本信息', {
-            'fields': ('project', 'bundle_prefix'),
+            'fields': ('sid', 'project', 'bundle_prefix'),
         }],
         ['额外信息', {
             'classes': ('collapse',),
