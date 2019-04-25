@@ -19,7 +19,7 @@ def valid_host(src: str):
 
 
 __HOST = valid_host(os.environ.get("VIRTUAL_HOST", "127.0.0.1:8000"))[0]
-__STATIC_HOST = "static_%s" % __HOST
+__STATIC_HOST = os.environ.get("STATIC_HOST", "static_%s" % __HOST)
 
 
 def entry(path: str, follow_proto=False, proto="http") -> str:
