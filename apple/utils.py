@@ -27,9 +27,12 @@ def _set_cache(url: str, data: Dict, content: str, expire: int):
 
 
 __pub = db_session.pubsub()
-if __pub.connection:
+
+# noinspection PyBroadException
+try:
+    db_session.info()
     __pub.subscribe("account:security:code")
-else:
+except:
     if os.environ.get("REDIS_HOST"):
         Fail("redis[%s:%s]没准备好" % (os.environ.get("REDIS_HOST"), os.environ.get("REDIS_PORT")))
     else:
