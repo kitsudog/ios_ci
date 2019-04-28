@@ -164,26 +164,29 @@ def _package(orig_file, provisioning_profile, certificate, output_path):
     mp_file = os.path.join(base, "mp.ipa")
     os.symlink(os.path.abspath(orig_file), ipa_file)
     os.symlink(os.path.abspath(provisioning_profile), mp_file)
-    with Block("打包", fail=False):
-        Log("准备ipa[%s]" % ipa_file)
-        app = app_argument(ipa_file).unpack_to_dir(base)
-        Log("准备provision")
-        app.provision(mp_file)
-        Log("构造entitlements")
-        app.create_entitlements()
-        Log("签名证书")
-        app.sign(certificate)
-        Log("重新封包")
-        app.package(output_path)
-        Log("ipa[%s]" % output_path)
+    Log("准备ipa[%s]" % ipa_file)
+    # with Block("打包", fail=False):
+    #     app = app_argument(ipa_file).unpack_to_dir(base)
+    #     Log("准备provision")
+    #     app.provision(mp_file)
+    #     Log("构造entitlements")
+    #     app.create_entitlements()
+    #     Log("签名证书")
+    #     app.sign(certificate)
+    #     Log("重新封包")
+    #     app.package(output_path)
+    #     Log("ipa[%s]" % output_path)
     try:
         if not os.path.isfile(output_path):
             # 方案二打包
             sh_file = os.path.join(base, "provisions.sh")
-            os.symlink(os.path.abspath("./tools/provisions.sh"), sh_file)
-            _run("bash %s -p %s -c '%s' %s " % (sh_file, mp_file, certificate, ipa_file), debug=True)
-            os.rename(os.path.join(base, "stage", "out.ipa"), output_path)
-            
+            if os.path.exists("provisions.sh"):
+                os.symlink(os.path.abspath("provisions.sh"), sh_file)
+            else:
+                os.symlink(os.path.abspath("tools/provisions.sh"), sh_file)
+            _run("/bin/bash %s -p %s -c '%s' %s " % (sh_file, mp_file, certificate, ipa_file), succ_only=True, debug=True, pwd=base)
+            os.rename(os.path.join(base, "stage", "out.ipa"), os.path.abspath(output_path))
+
         if not os.path.isfile(output_path):
             raise Fail("打包失败")
     finally:
@@ -200,7 +203,7 @@ def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=Fa
         verbose = True
     if verbose:
         if debug:
-            Log("+ [%s] [%s]" % (pwd or os.path.curdir, cmd))
+            Log("+ [%s] [%s]" % (os.path.abspath(pwd or os.path.curdir), cmd))
         else:
             Log("+ [%s]" % cmd)
     p = Popen(cmd, bufsize=1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT if include_err and not err_last else subprocess.PIPE,
@@ -385,3 +388,4 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
         }
     except:
         _update_state(process_url, worker, "fail")
+        Log("打包任务失败了")
