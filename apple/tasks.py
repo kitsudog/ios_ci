@@ -47,7 +47,7 @@ class App(object):
         return self.path
 
     def provision(self, provision_path):
-        Log("provision_path: {0}".format(provision_path))
+        Log("provision_path[{0}]".format(provision_path))
         shutil.copyfile(provision_path, self.provision_path)
 
     def create_entitlements(self):
@@ -58,26 +58,24 @@ class App(object):
         # hence, temporary intermediate file
 
         decoded_provision_fh, decoded_provision_path = tempfile.mkstemp()
-        decoded_provision_fh = open(decoded_provision_path, 'w')
-        decode_args = [SECURITY_BIN, 'cms', '-D', '-i', self.provision_path]
-        process = Popen(decode_args, stdout=decoded_provision_fh)
-        # if we don't wait for this to complete, it's likely
-        # the next part will see a zero-length file
-        process.wait()
+        with open(decoded_provision_path, 'w') as decoded_provision_fh:
+            decode_args = [SECURITY_BIN, 'cms', '-D', '-i', self.provision_path]
+            process = Popen(decode_args, stdout=decoded_provision_fh)
+            # if we don't wait for this to complete, it's likely
+            # the next part will see a zero-length file
+            process.wait()
+            assert process.returncode == 0, "decode a CMS message error"
 
-        get_entitlements_cmd = [
-            PLIST_BUDDY_BIN,
-            '-x',
-            '-c',
-            'print :Entitlements ',
-            decoded_provision_path]
-        entitlements_fh = open(self.entitlements_path, 'w')
-        process2 = Popen(get_entitlements_cmd, stdout=entitlements_fh)
-        process2.wait()
-        entitlements_fh.close()
-
-        # should destroy the file
-        decoded_provision_fh.close()
+            get_entitlements_cmd = [
+                PLIST_BUDDY_BIN,
+                '-x',
+                '-c',
+                'print :Entitlements ',
+                decoded_provision_path]
+            with open(self.entitlements_path, 'w') as entitlements_fh:
+                process2 = Popen(get_entitlements_cmd, stdout=entitlements_fh)
+                process2.wait()
+                assert process2.returncode == 0, "创建Entitlements.plist失败"
 
     # noinspection PyDefaultArgument,PyMethodMayBeStatic
     def codesign(self, certificate, path, extra_args=[]):
@@ -118,7 +116,7 @@ class IpaApp(App):
     def package(self, output_path):
         if not output_path.endswith('.ipa'):
             output_path = output_path + '.ipa'
-        Popen([ZIP_BIN, "-qr", os.path.relpath(output_path, self.path), "Payload"], cwd=self.path)
+        _run(" ".join([ZIP_BIN, "-qr", os.path.relpath(output_path, self.path), "Payload"]), pwd=self.path, succ_only=True)
         assert os.path.isfile(output_path), 'zip打包失败'
         return output_path
 
@@ -162,9 +160,13 @@ def app_argument(path):
 
 def _package(ipa_file, provisioning_profile, certificate, output_path):
     app = app_argument(ipa_file).unpack_to_dir(os.path.dirname(output_path))
+    Log("准备provision")
     app.provision(provisioning_profile)
+    Log("构造entitlements")
     app.create_entitlements()
+    Log("签名证书")
     app.sign(certificate)
+    Log("重新封包")
     app.package(output_path)
 
 
@@ -173,9 +175,9 @@ def refresh_certs():
     _refresh_certs()
 
 
-def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=False):
+def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=False, pwd=None):
     p = Popen(cmd, bufsize=1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT if include_err and not err_last else subprocess.PIPE,
-              shell=True)
+              shell=True, cwd=pwd)
     expire = now() + timeout
     buffer = []
     buffer_err = []
