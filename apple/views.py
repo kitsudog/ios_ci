@@ -497,7 +497,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
     return True
 
 
-def __add_task(_user: UserInfo):
+def __add_task(title: str, _user: UserInfo):
     _account = IosAccountInfo.objects.get(account=_user.account)
     _project = IosProjectInfo.objects.get(project=_user.project)
     _profile = IosProfileInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
@@ -505,12 +505,12 @@ def __add_task(_user: UserInfo):
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
     Assert(_cert.cert_p12, "项目[%s]p12还没上传" % _project.project)
-    Log("[%s]发布任务[%s][%s]" % (_user.project, _user.account, _user.udid))
     _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
     _task.state = "none"
     _task.worker = ""
     _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
     _task.save()
+    Log("[%s]发布任务[%s][%s][%s]" % (_user.project, _user.account, title, _user.udid))
 
     def func():
         resign_ipa.delay(**{
@@ -574,7 +574,7 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     _user.project = _detail["project"]
     _user.account = _account.account
     _user.save()
-    __add_task(_user)
+    __add_task("新客户端启动任务", _user)
     return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s" % (project, uuid)))
 
 
@@ -956,7 +956,7 @@ def info(_req: HttpRequest, project: str, uuid: str = ""):
         _task = TaskInfo.objects.filter(uuid=uuid).first()  # type:TaskInfo
         if _task:
             if _task.state == "fail" or _task.expire.timestamp() * 1000 < now():
-                __add_task(_user)
+                __add_task("客户端重启任务", _user)
 
     else:
         uuid = _newbee(_project)
@@ -1010,7 +1010,7 @@ _states = ["ready", "prepare_env", "prepare_cert", "prepare_mp", "prepare_ipa", 
 @Action
 def rebuild(uuid: str):
     _user = UserInfo.objects.get(uuid=uuid)
-    __add_task(_user)
+    __add_task("管理后台重启", _user)
     return {
         "succ": True,
     }
