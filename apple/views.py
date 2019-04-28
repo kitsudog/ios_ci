@@ -708,10 +708,10 @@ def upload_project_ipa(project: str, file: bytes):
 def upload_cert_p12(account: str, file: bytes, password: str = "q1w2e3r4"):
     p12 = crypto.load_pkcs12(file, password)
     # noinspection PyTypeChecker
-    name = re.match(r"iPhone Developer: (.+) \([A-Z0-9]+\)", p12.get_friendlyname().decode("utf8")).groups()
+    name = re.match(r"iPhone Developer: (.+ \([A-Z0-9]+\))", p12.get_friendlyname().decode("utf8")).groups()
     Assert(len(name), "非法的p12文件")
     name = name[0]  # type: str
-    _cert = IosCertInfo.objects.get(sid="%s:%s" % (account, name))
+    _cert = IosCertInfo.objects.get(account=account, name=name)
     _cert.cert_p12 = base64(file)
     _cert.save()
     return {
@@ -858,6 +858,7 @@ def download_cert(uuid: str, filename: str = "cert.p12"):
     _user = UserInfo.objects.get(uuid=uuid)
     _profile = IosProfileInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
     _cert = IosCertInfo.objects.get(sid="%s:%s" % (_user.account, str_json_a(_profile.certs)[0]))
+    Assert(_cert.cert_p12, "[%s]请先上传p12文件" % _user.account)
     response = HttpResponse(base64decode(_cert.cert_p12))
     response['Content-Type'] = 'application/octet-stream'
     response['Content-Disposition'] = 'attachment;filename="%s"' % filename
