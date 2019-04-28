@@ -856,7 +856,7 @@ def manifest(uuid: str, need_process=True, download_id: str = ""):
 @Action
 def download_cert(uuid: str, filename: str = "cert.p12"):
     _user = UserInfo.objects.get(uuid=uuid)
-    _cert = IosCertInfo.objects.get(app=_user.account)
+    _cert = IosCertInfo.objects.get(account=_user.account)
     response = HttpResponse(base64decode(_cert.cert_p12))
     response['Content-Type'] = 'application/octet-stream'
     response['Content-Disposition'] = 'attachment;filename="%s"' % filename
