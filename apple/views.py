@@ -5,7 +5,7 @@ import re
 import tempfile
 import time
 from subprocess import call
-from typing import Dict, List, Callable
+from typing import Dict, Callable
 
 import gevent
 import requests
@@ -76,9 +76,9 @@ def _reg_device(account: str, device_id: str, udid: str, model: str, sn: str) ->
     return udid
 
 
-def _get_cert(info: IosAccountInfo) -> IosCertInfo:
+def _get_cert(_info: IosAccountInfo) -> IosCertInfo:
     cert = IosCertInfo.objects.filter(
-        app=info.account,
+        account=_info.account,
         expire__gt=datetime.datetime.utcfromtimestamp(now() // 1000),
         type_str="development",
     ).first()  # type: IosCertInfo
@@ -426,7 +426,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                 _info.devices_num = 0
                 _info.project = project
 
-            devices = str_json(_info.devices)  # type: List[str]
+            devices = str_json_a(_info.devices)
 
             if udid in devices:
                 pass
@@ -696,6 +696,7 @@ def upload_project_ipa(project: str, file: bytes):
 @Action
 def upload_cert_p12(account: str, file: bytes, password: str = "q1w2e3r4"):
     p12 = crypto.load_pkcs12(file, password)
+    # noinspection PyTypeChecker
     name = re.match(r"iPhone Developer: (.+) \([A-Z0-9]+\)", p12.get_friendlyname().decode("utf8")).groups()
     Assert(len(name), "非法的p12文件")
     name = name[0]  # type: str
