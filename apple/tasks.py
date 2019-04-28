@@ -217,6 +217,7 @@ def _download(url, file, md5=None):
         assert md5bytes(read_binary_file(file)) == md5, "下载[%s]校验失败" % url
 
 
+# noinspection PyBroadException
 @task(bind=True, time_limit=120, max_retries=3, default_retry_delay=10)
 def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, mp_url, mp_md5, project, ipa_url, ipa_md5, ipa_new,
                upload_url, process_url: str):
@@ -224,62 +225,62 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
     Log("[%s]启动Celery任务[%s][%s][%s]" % (worker, uuid, self.request.retries, json_str(self.request.kwargs)))
     base = tempfile.gettempdir()
     _update_state(process_url, worker, "ready")
-    # 确认ipa
-    with Block("cert部分"):
-        if cert in _certs:
-            Log("钥匙串中已经拥有证书[%s]" % cert)
-        else:
-            _refresh_certs()
-        if cert in _certs:
-            Log("钥匙串中已经拥有证书[%s]" % cert)
-        else:
-            _update_state(process_url, worker, "prepare_cert")
-            Log("下载证书p12[%s]" % cert)
-            file_cert = os.path.join(base, "cert.p12")
-            _download(cert_url, file_cert, md5=cert_md5)
-            Log("导入证书p12[%s]" % cert)
-            assert call([SECURITY_BIN, "import", file_cert, "-P", "q1w2e3r4"]), "导入证书[%s]失败" % cert
-    with Block("mobileprovision部分"):
-        file_mp = os.path.join(base, "package.mobileprovision")
-        if os.path.isfile(file_mp) and md5bytes(read_binary_file(file_mp)) == mp_md5:
-            Log("采用本地的mobileprovision文件")
-        else:
-            _update_state(process_url, worker, "prepare_mp")
-            Log("下载mobileprovision文件")
-            os.makedirs(os.path.join("package", project), exist_ok=True)
-            _download(mp_url, file_mp, md5=mp_md5)
-    with Block("ipa部分"):
-        file_ipa = os.path.join("package", project, "orig.ipa")
-        if os.path.isfile(file_ipa) and md5bytes(read_binary_file(file_ipa)) == ipa_md5:
-            Log("采用本地的ipa文件")
-        else:
-            _update_state(process_url, worker, "prepare_ipa")
-            Log("下载ipa文件[%s]" % ipa_url)
-            os.makedirs(os.path.join("package", project), exist_ok=True)
-            _download(ipa_url, file_ipa, md5=ipa_md5)
+    try:
+        # 确认ipa
+        with Block("cert部分"):
+            if cert in _certs:
+                Log("钥匙串中已经拥有证书[%s]" % cert)
+            else:
+                _refresh_certs()
+            if cert in _certs:
+                Log("钥匙串中已经拥有证书[%s]" % cert)
+            else:
+                _update_state(process_url, worker, "prepare_cert")
+                Log("下载证书p12[%s]" % cert)
+                file_cert = os.path.join(base, "cert.p12")
+                _download(cert_url, file_cert, md5=cert_md5)
+                Log("导入证书p12[%s]" % cert)
+                assert call([SECURITY_BIN, "import", file_cert, "-P", "q1w2e3r4"]), "导入证书[%s]失败" % cert
+        with Block("mobileprovision部分"):
+            file_mp = os.path.join(base, "package.mobileprovision")
+            if os.path.isfile(file_mp) and md5bytes(read_binary_file(file_mp)) == mp_md5:
+                Log("采用本地的mobileprovision文件")
+            else:
+                _update_state(process_url, worker, "prepare_mp")
+                Log("下载mobileprovision文件")
+                os.makedirs(os.path.join("package", project), exist_ok=True)
+                _download(mp_url, file_mp, md5=mp_md5)
+        with Block("ipa部分"):
+            file_ipa = os.path.join("package", project, "orig.ipa")
+            if os.path.isfile(file_ipa) and md5bytes(read_binary_file(file_ipa)) == ipa_md5:
+                Log("采用本地的ipa文件")
+            else:
+                _update_state(process_url, worker, "prepare_ipa")
+                Log("下载ipa文件[%s]" % ipa_url)
+                os.makedirs(os.path.join("package", project), exist_ok=True)
+                _download(ipa_url, file_ipa, md5=ipa_md5)
 
-    with Block("打包"):
-        Log("开始打包[%s]" % project)
-        file_new = os.path.join("package", project, ipa_new)
-        _update_state(process_url, worker, "resign")
-        # noinspection PyBroadException
-        try:
+        with Block("打包"):
+            Log("开始打包[%s]" % project)
+            file_new = os.path.join("package", project, ipa_new)
+            _update_state(process_url, worker, "resign")
+            # noinspection PyBroadException
             _package(file_ipa, file_mp, cert, file_new)
-        except Exception:
-            _update_state(process_url, worker, "fail")
 
-    with Block("上传"):
-        _update_state(process_url, worker, "upload_ipa")
-        Log("上传ipa[%s][%s]" % (project, upload_url))
-        rsp = requests.post(upload_url, files={
-            "worker": worker,
-            "file": read_binary_file(file_new),
-        })
-        assert rsp.status_code == 200
-        assert rsp.json()["ret"] == 0
-    Log("任务完成")
-    _update_state(process_url, worker, "succ", fail=True)
-    return {
-        "succ": True,
-        "uuid": uuid,
-    }
+        with Block("上传"):
+            _update_state(process_url, worker, "upload_ipa")
+            Log("上传ipa[%s][%s]" % (project, upload_url))
+            rsp = requests.post(upload_url, files={
+                "worker": worker,
+                "file": read_binary_file(file_new),
+            })
+            assert rsp.status_code == 200
+            assert rsp.json()["ret"] == 0
+        Log("任务完成")
+        _update_state(process_url, worker, "succ", fail=True)
+        return {
+            "succ": True,
+            "uuid": uuid,
+        }
+    except:
+        _update_state(process_url, worker, "fail")

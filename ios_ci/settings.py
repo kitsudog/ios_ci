@@ -237,3 +237,5 @@ SUIT_CONFIG = {
 
 STATIC_URL = '/static/' if DEBUG else static_entry("/", follow_proto=True)
 STATIC_ROOT = 'static' if DEBUG else '/var/www/html'
+
+Log("重新启动服务器")
