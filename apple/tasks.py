@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from subprocess import call, Popen
 
 import gevent
@@ -11,7 +12,7 @@ import requests
 from celery import Task
 from celery.task import task
 
-from base.style import Log, Block, now, json_str
+from base.style import Log, Block, now, json_str, Fail
 from base.utils import read_binary_file, md5bytes
 
 
@@ -172,6 +173,45 @@ def refresh_certs():
     _refresh_certs()
 
 
+def _run(cmd: str, timeout=30000, succ_only=False):
+    p = Popen(cmd, bufsize=1, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    expire = now() + timeout
+    while p.poll() is None:
+        if now() < expire:
+            time.sleep(0.1)
+    if succ_only:
+        if p.returncode == 0:
+            pass
+        else:
+            raise Fail("命令[%s]执行失败" % cmd)
+    for each in map(lambda x: x.decode("utf8").strip(), p.stdout.readlines()):
+        yield each
+
+
+# noinspection SpellCheckingInspection
+def _load_awwdrca():
+    """
+    加载 Apple Worldwide Developer Relations Certification Authority
+    """
+    for each in _run("security find-certificate -a", succ_only=True):
+        if "Apple Worldwide Developer Relations Certification Authority" in each:
+            return True
+    base = tempfile.gettempdir()
+    _run("curl -sSLk https://developer.apple.com/certificationauthority/AppleWWDRCA.cer -o %s/AppleWWDRCA.cer" % base)
+    _run("security add-certificates %s/AppleWWDRCA.cer" % base)
+    return True
+
+
+def _check_cert(cert: str, fail=False) -> bool:
+    _load_awwdrca()
+    _refresh_certs()
+    if cert in _certs:
+        return True
+    if fail:
+        raise Fail("找不到指定的证书")
+    return False
+
+
 def _refresh_certs():
     p = Popen("security find-identity -p codesigning -v", bufsize=1, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     expire = now() + 30000
@@ -241,6 +281,8 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
                 _download(cert_url, file_cert, md5=cert_md5)
                 Log("导入证书p12[%s]" % cert)
                 assert call([SECURITY_BIN, "import", file_cert, "-P", "q1w2e3r4"]) == 0, "导入证书[%s]失败" % cert
+                if not _check_cert(cert):
+                    _update_state(process_url, worker, "exception", fail=True)
         with Block("mobileprovision部分"):
             file_mp = os.path.join(base, "package.mobileprovision")
             if os.path.isfile(file_mp) and md5bytes(read_binary_file(file_mp)) == mp_md5:

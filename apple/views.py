@@ -707,10 +707,17 @@ def upload_project_ipa(project: str, file: bytes):
 @Action
 def upload_cert_p12(account: str, file: bytes, password: str = "q1w2e3r4"):
     p12 = crypto.load_pkcs12(file, password)
-    # noinspection PyTypeChecker
-    name = re.match(r"iPhone Developer: (.+ \([A-Z0-9]+\))", p12.get_friendlyname().decode("utf8")).groups()
-    Assert(len(name), "非法的p12文件")
-    name = name[0]  # type: str
+    components = p12.get_certificate().get_issuer().get_components()
+    if b"Apple Worldwide Developer Relations Certification Authority" not in list(map(lambda x: x[-1], components)):
+        Log("一个机构不确定的证书[%s]" % components)
+        return {
+            "succ": False,
+            "msg": "机构未知",
+        }
+
+    tmp = re.match(r"iPhone Developer: (.+ \([A-Z0-9]+\))", p12.get_friendlyname().decode("utf8")).groups()
+    Assert(len(tmp), "非法的p12文件")
+    name = tmp[0]  # type: str
     _cert = IosCertInfo.objects.get(account=account, name=name)
     _cert.cert_p12 = base64(file)
     _cert.save()
