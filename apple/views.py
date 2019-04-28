@@ -730,6 +730,7 @@ def upload_cert_p12(account: str, file: bytes, password: str = "q1w2e3r4"):
 def upload_ipa(worker: str, uuid: str, file: bytes):
     _user = UserInfo.objects.get(uuid=uuid)
     project = _user.project
+    _project = IosProjectInfo.objects.get(project=project)
     account = _user.account
     base = os.path.join("static/income", project)
     os.makedirs(base, exist_ok=True)
@@ -738,7 +739,9 @@ def upload_ipa(worker: str, uuid: str, file: bytes):
     filename = "%s_%s.ipa" % (_info.team_id, _info.devices_num)
     with open(os.path.join(base, filename), mode="wb") as fout:
         fout.write(file)
-    Log("[%s]收到新打包的ipa[%s]" % (account, filename))
+    _project.md5sum = md5bytes(file)
+    _project.save()
+    Log("[%s]收到新打包的ipa[%s][%s]" % (account, filename, _project.md5sum))
     # todo: 遍历所有的设备关联的包?
     _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
     if _task.worker in {worker, "none"}:

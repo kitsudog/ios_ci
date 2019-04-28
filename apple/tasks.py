@@ -7,12 +7,11 @@ import tempfile
 import time
 from subprocess import call, Popen
 
-import gevent
 import requests
 from celery import Task
 from celery.task import task
 
-from base.style import Log, Block, now, json_str, Fail, Trace
+from base.style import Log, Block, now, json_str, Fail, Trace, Assert
 from base.utils import read_binary_file, md5bytes
 
 
@@ -79,7 +78,7 @@ class App(object):
 
     # noinspection PyDefaultArgument,PyMethodMayBeStatic
     def codesign(self, certificate, path, extra_args=[]):
-        _run(" ".join([CODESIGN_BIN, '-f', '-s', certificate] + extra_args + [path]), succ_only=True, debug=True)
+        _shell_run(" ".join([CODESIGN_BIN, '-f', '-s', certificate] + extra_args + [path]), succ_only=True, debug=True)
 
     def sign(self, certificate):
         # first sign all the dylibs
@@ -116,7 +115,7 @@ class IpaApp(App):
     def package(self, output_path):
         if not output_path.endswith('.ipa'):
             output_path = output_path + '.ipa'
-        _run(" ".join([ZIP_BIN, "-qr", os.path.abspath(output_path), "Payload"]), pwd=self.path, succ_only=True, debug=True)
+        _shell_run(" ".join([ZIP_BIN, "-qr", os.path.abspath(output_path), "Payload"]), pwd=self.path, succ_only=True, debug=True)
         assert os.path.isfile(output_path), 'zip打包失败'
         return output_path
 
@@ -177,14 +176,16 @@ def _package(orig_file, provisioning_profile, certificate, output_path):
     #     app.package(output_path)
     #     Log("ipa[%s]" % output_path)
     try:
-        if not os.path.isfile(output_path):
+        if not os.path.isfile(output_path) or True:
             # 方案二打包
             sh_file = os.path.join(base, "provisions.sh")
             if os.path.exists("provisions.sh"):
                 os.symlink(os.path.abspath("provisions.sh"), sh_file)
             else:
                 os.symlink(os.path.abspath("tools/provisions.sh"), sh_file)
-            _run("/bin/bash %s -p %s -c '%s' %s " % (sh_file, mp_file, certificate, ipa_file), succ_only=True, debug=True, pwd=base)
+            _shell_run("%s -p %s -c '%s' %s " % (sh_file, mp_file, certificate, ipa_file), succ_only=True, verbose=True,
+                       debug=True, pwd=base)
+            Assert(os.path.isfile(os.path.join(base, "stage", "out.ipa")), "打包脚本失败了")
             os.rename(os.path.join(base, "stage", "out.ipa"), os.path.abspath(output_path))
 
         if not os.path.isfile(output_path):
@@ -198,7 +199,7 @@ def refresh_certs():
     _refresh_certs()
 
 
-def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=False, pwd=None, verbose=False, debug=False):
+def _shell_run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=False, pwd=None, verbose=False, debug=False):
     if debug:
         verbose = True
     if verbose:
@@ -233,20 +234,39 @@ def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=Fa
         buffer.extend(p.stdout.readlines())
     if p.stderr and p.stderr.readable():
         buffer_err.extend(p.stderr.readlines())
+    # todo: 采用yield后会导致不执行...
+    # if debug:
+    #     for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
+    #         Log("- %s" % each.rstrip("\r\n"))
+    #         yield each.rstrip("\r\n")
+    #     if err_last:
+    #         for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
+    #             Log("* %s" % each.rstrip("\r\n"))
+    #             yield each.rstrip("\r\n")
+    # else:
+    #     for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
+    #         yield each.rstrip("\r\n")
+    #     if err_last:
+    #         for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
+    #             yield each.rstrip("\r\n")
     if debug:
+        tmp = []
         for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
             Log("- %s" % each.rstrip("\r\n"))
-            yield each.rstrip("\r\n")
+            tmp.append(each.rstrip("\r\n"))
         if err_last:
             for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
                 Log("* %s" % each.rstrip("\r\n"))
-                yield each.rstrip("\r\n")
+                tmp.append(each.rstrip("\r\n"))
+        return tmp
     else:
+        tmp = []
         for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
-            yield each.rstrip("\r\n")
+            tmp.append(each.rstrip("\r\n"))
         if err_last:
             for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
-                yield each.rstrip("\r\n")
+                tmp.append(each.rstrip("\r\n"))
+        return tmp
 
 
 # noinspection SpellCheckingInspection
@@ -254,13 +274,13 @@ def _load_awwdrca():
     """
     加载 Apple Worldwide Developer Relations Certification Authority
     """
-    for each in _run("security find-certificate -a", succ_only=True):
+    for each in _shell_run("security find-certificate -a", succ_only=True):
         if "Apple Worldwide Developer Relations Certification Authority" in each:
             return True
     Log("加载AppleWWDRCA")
     base = tempfile.gettempdir()
-    _run("curl -sSLk https://developer.apple.com/certificationauthority/AppleWWDRCA.cer -o %s/AppleWWDRCA.cer" % base)
-    _run("security add-certificates %s/AppleWWDRCA.cer" % base)
+    _shell_run("curl -sSLk https://developer.apple.com/certificationauthority/AppleWWDRCA.cer -o %s/AppleWWDRCA.cer" % base)
+    _shell_run("security add-certificates %s/AppleWWDRCA.cer" % base)
     return True
 
 
@@ -275,13 +295,8 @@ def _check_cert(cert: str, fail=False) -> bool:
 
 
 def _refresh_certs():
-    p = Popen("security find-identity -p codesigning -v", bufsize=1, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    expire = now() + 30000
-    while p.poll() is None:
-        if now() < expire:
-            gevent.sleep(1)
     expr = re.compile(r'\s*\d+\)\s*\S+\s+"([^"]+(\s+\(.+\)))"')
-    for each in map(lambda x: x.decode("utf8").strip(), p.stdout.readlines()):
+    for each in _shell_run("security find-identity -p codesigning -v"):
         result = expr.match(each)
         if not result:
             continue
