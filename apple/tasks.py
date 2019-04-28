@@ -240,7 +240,7 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
                 file_cert = os.path.join(base, "cert.p12")
                 _download(cert_url, file_cert, md5=cert_md5)
                 Log("导入证书p12[%s]" % cert)
-                assert call([SECURITY_BIN, "import", file_cert, "-P", "q1w2e3r4"]), "导入证书[%s]失败" % cert
+                assert call([SECURITY_BIN, "import", file_cert, "-P", "q1w2e3r4"]) == 0, "导入证书[%s]失败" % cert
         with Block("mobileprovision部分"):
             file_mp = os.path.join(base, "package.mobileprovision")
             if os.path.isfile(file_mp) and md5bytes(read_binary_file(file_mp)) == mp_md5:
