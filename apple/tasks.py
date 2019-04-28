@@ -116,7 +116,7 @@ class IpaApp(App):
     def package(self, output_path):
         if not output_path.endswith('.ipa'):
             output_path = output_path + '.ipa'
-        _run(" ".join([ZIP_BIN, "-qr", os.path.relpath(output_path, self.path), "Payload"]), pwd=self.path, succ_only=True)
+        _run(" ".join([ZIP_BIN, "-qr", os.path.abspath(output_path), "Payload"]), pwd=self.path, succ_only=True, debug=True)
         assert os.path.isfile(output_path), 'zip打包失败'
         return output_path
 
@@ -158,16 +158,36 @@ def app_argument(path):
     return app
 
 
-def _package(ipa_file, provisioning_profile, certificate, output_path):
-    app = app_argument(ipa_file).unpack_to_dir(os.path.dirname(output_path))
-    Log("准备provision")
-    app.provision(provisioning_profile)
-    Log("构造entitlements")
-    app.create_entitlements()
-    Log("签名证书")
-    app.sign(certificate)
-    Log("重新封包")
-    app.package(output_path)
+def _package(orig_file, provisioning_profile, certificate, output_path):
+    base = tempfile.mkdtemp()
+    ipa_file = os.path.join(base, "orig.ipa")
+    mp_file = os.path.join(base, "mp.ipa")
+    os.symlink(os.path.abspath(orig_file), ipa_file)
+    os.symlink(os.path.abspath(provisioning_profile), mp_file)
+    with Block("打包", fail=False):
+        Log("准备ipa[%s]" % ipa_file)
+        app = app_argument(ipa_file).unpack_to_dir(base)
+        Log("准备provision")
+        app.provision(mp_file)
+        Log("构造entitlements")
+        app.create_entitlements()
+        Log("签名证书")
+        app.sign(certificate)
+        Log("重新封包")
+        app.package(output_path)
+        Log("ipa[%s]" % output_path)
+    try:
+        if not os.path.isfile(output_path):
+            # 方案二打包
+            sh_file = os.path.join(base, "provisions.sh")
+            os.symlink(os.path.abspath("./tools/provisions.sh"), sh_file)
+            _run("bash %s -p %s -c '%s' %s " % (sh_file, mp_file, certificate, ipa_file), debug=True)
+            os.rename(os.path.join(base, "stage", "out.ipa"), output_path)
+            
+        if not os.path.isfile(output_path):
+            raise Fail("打包失败")
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
 
 
 @task
