@@ -79,7 +79,7 @@ class App(object):
 
     # noinspection PyDefaultArgument,PyMethodMayBeStatic
     def codesign(self, certificate, path, extra_args=[]):
-        call([CODESIGN_BIN, '-f', '-s', certificate] + extra_args + [path])
+        _run(" ".join([CODESIGN_BIN, '-f', '-s', certificate] + extra_args + [path]), succ_only=True, debug=True)
 
     def sign(self, certificate):
         # first sign all the dylibs
@@ -175,7 +175,14 @@ def refresh_certs():
     _refresh_certs()
 
 
-def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=False, pwd=None):
+def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=False, pwd=None, verbose=False, debug=False):
+    if debug:
+        verbose = True
+    if verbose:
+        if debug:
+            Log("+ [%s] [%s]" % (pwd or os.path.curdir, cmd))
+        else:
+            Log("+ [%s]" % cmd)
     p = Popen(cmd, bufsize=1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT if include_err and not err_last else subprocess.PIPE,
               shell=True, cwd=pwd)
     expire = now() + timeout
@@ -203,11 +210,20 @@ def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=Fa
         buffer.extend(p.stdout.readlines())
     if p.stderr and p.stderr.readable():
         buffer_err.extend(p.stderr.readlines())
-    for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
-        yield each.rstrip("\r\n")
-    if err_last:
-        for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
+    if debug:
+        for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
+            Log("- %s" % each.rstrip("\r\n"))
             yield each.rstrip("\r\n")
+        if err_last:
+            for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
+                Log("* %s" % each.rstrip("\r\n"))
+                yield each.rstrip("\r\n")
+    else:
+        for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
+            yield each.rstrip("\r\n")
+        if err_last:
+            for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
+                yield each.rstrip("\r\n")
 
 
 # noinspection SpellCheckingInspection
