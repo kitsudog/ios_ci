@@ -689,15 +689,15 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
 
 @Action
 def upload_project_ipa(project: str, file: bytes):
-    _info = IosProjectInfo.objects.get(project=project)
+    _project = IosProjectInfo.objects.get(project=project)
     base = os.path.join("static/projects", project)
     os.makedirs(base, exist_ok=True)
     with open(os.path.join(base, "orig.ipa"), mode="wb") as fout:
         fout.write(file)
-    if _info.md5sum != md5bytes(file):
-        _info.md5sum = md5bytes(file)
-        _info.save()
-        Log("更新工程[%s]的ipa[%s]" % (project, _info.md5sum))
+    if _project.md5sum != md5bytes(file):
+        _project.md5sum = md5bytes(file)
+        _project.save()
+        Log("更新工程[%s]的ipa[%s]" % (project, _project.md5sum))
     # todo: 激活更新一下
     return {
         "succ": True,
@@ -728,9 +728,11 @@ def upload_cert_p12(account: str, file: bytes, password: str = "q1w2e3r4"):
 
 @Action
 def upload_ipa(worker: str, uuid: str, file: bytes):
+    """
+    上传打好的包
+    """
     _user = UserInfo.objects.get(uuid=uuid)
     project = _user.project
-    _project = IosProjectInfo.objects.get(project=project)
     account = _user.account
     base = os.path.join("static/income", project)
     os.makedirs(base, exist_ok=True)
@@ -739,9 +741,8 @@ def upload_ipa(worker: str, uuid: str, file: bytes):
     filename = "%s_%s.ipa" % (_info.team_id, _info.devices_num)
     with open(os.path.join(base, filename), mode="wb") as fout:
         fout.write(file)
-    _project.md5sum = md5bytes(file)
-    _project.save()
-    Log("[%s]收到新打包的ipa[%s][%s]" % (account, filename, _project.md5sum))
+
+    Log("[%s]收到新打包的ipa[%s]" % (account, filename))
     # todo: 遍历所有的设备关联的包?
     _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
     if _task.worker in {worker, "none"}:
