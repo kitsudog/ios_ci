@@ -132,5 +132,5 @@ class TaskInfoAdmin(admin.ModelAdmin):
         })
         self.message_user(request, "任务重新提交执行")
 
-    restart.short_description = "重提提交任务"
+    restart.short_description = "重新提交任务"
     actions = ['restart']

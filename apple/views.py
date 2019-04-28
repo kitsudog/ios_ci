@@ -505,10 +505,11 @@ def __add_task(_user: UserInfo):
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
     Assert(_cert.cert_p12, "项目[%s]p12还没上传" % _project.project)
-    Log("[%s]发布任务[%s]" % (_user.project, _user.account))
+    Log("[%s]发布任务[%s][%s]" % (_user.project, _user.account, _user.udid))
     _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
     _task.state = "none"
     _task.worker = ""
+    _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
     _task.save()
 
     def func():
@@ -527,7 +528,10 @@ def __add_task(_user: UserInfo):
             "process_url": entry("/apple/task_state?uuid=%s" % _user.uuid),
         })
 
-    gevent.spawn(func)
+    if ide_debug():
+        gevent.spawn(func)
+    else:
+        func()
 
 
 # noinspection PyShadowingNames
