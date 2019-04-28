@@ -173,19 +173,39 @@ def refresh_certs():
     _refresh_certs()
 
 
-def _run(cmd: str, timeout=30000, succ_only=False):
-    p = Popen(cmd, bufsize=1, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+def _run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_last=False):
+    p = Popen(cmd, bufsize=1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT if include_err and not err_last else subprocess.PIPE,
+              shell=True)
     expire = now() + timeout
+    buffer = []
+    buffer_err = []
     while p.poll() is None:
         if now() < expire:
             time.sleep(0.1)
+        else:
+            p.kill()
+            break
+        if p.stdout.readable():
+            buffer.extend(p.stdout.readlines())
+        if include_err:
+            if err_last:
+                if p.stderr.readable():
+                    buffer_err.extend(p.stderr.readlines())
+
     if succ_only:
         if p.returncode == 0:
             pass
         else:
             raise Fail("命令[%s]执行失败" % cmd)
-    for each in map(lambda x: x.decode("utf8").strip(), p.stdout.readlines()):
-        yield each
+    if p.stdout and p.stdout.readable():
+        buffer.extend(p.stdout.readlines())
+    if p.stderr and p.stderr.readable():
+        buffer_err.extend(p.stderr.readlines())
+    for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
+        yield each.rstrip("\r\n")
+    if err_last:
+        for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
+            yield each.rstrip("\r\n")
 
 
 # noinspection SpellCheckingInspection
