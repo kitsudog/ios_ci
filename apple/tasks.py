@@ -210,6 +210,13 @@ def _update_state(url: str, worker: str, state: str, fail=False):
                 raise Exception(fail)
 
 
+def _download(url, file, md5=None):
+    # assert call(["wget", url, "-O", file, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % url
+    assert call(["curl", url, "-o", file, "-sSLk"]) == 0, "下载[%s]失败了" % url
+    if md5:
+        assert md5bytes(read_binary_file(file)) == md5, "下载[%s]校验失败" % url
+
+
 @task(bind=True, time_limit=120, max_retries=3, default_retry_delay=10)
 def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, mp_url, mp_md5, project, ipa_url, ipa_md5, ipa_new,
                upload_url, process_url: str):
@@ -229,8 +236,7 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
             _update_state(process_url, worker, "prepare_cert")
             Log("下载证书p12[%s]" % cert)
             file_cert = os.path.join(base, "cert.p12")
-            assert call(["wget", cert_url, "-O", file_cert, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % cert_url
-            assert md5bytes(read_binary_file(file_cert)) == cert_md5, "下载[%s]失败" % cert_url
+            _download(cert_url, file_cert, md5=cert_md5)
             Log("导入证书p12[%s]" % cert)
             assert call([SECURITY_BIN, "import", file_cert, "-P", "q1w2e3r4"]), "导入证书[%s]失败" % cert
     with Block("mobileprovision部分"):
@@ -241,8 +247,7 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
             _update_state(process_url, worker, "prepare_mp")
             Log("下载mobileprovision文件")
             os.makedirs(os.path.join("package", project), exist_ok=True)
-            assert call(["wget", mp_url, "-O", file_mp, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % mp_url
-            assert md5bytes(read_binary_file(file_mp)) == mp_md5, "下载[%s]失败" % mp_url
+            _download(mp_url, file_mp, md5=mp_md5)
     with Block("ipa部分"):
         file_ipa = os.path.join("package", project, "orig.ipa")
         if os.path.isfile(file_ipa) and md5bytes(read_binary_file(file_ipa)) == ipa_md5:
@@ -251,8 +256,7 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
             _update_state(process_url, worker, "prepare_ipa")
             Log("下载ipa文件[%s]" % ipa_url)
             os.makedirs(os.path.join("package", project), exist_ok=True)
-            assert call(["wget", ipa_url, "-O", file_ipa, "-o", "/dev/null"]) == 0, "下载[%s]失败了" % ipa_url
-            assert md5bytes(read_binary_file(file_ipa)) == ipa_md5, "下载[%s]失败了" % ipa_url
+            _download(ipa_url, file_ipa, md5=ipa_md5)
 
     with Block("打包"):
         Log("开始打包[%s]" % project)
