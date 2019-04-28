@@ -12,7 +12,7 @@ import requests
 from celery import Task
 from celery.task import task
 
-from base.style import Log, Block, now, json_str, Fail
+from base.style import Log, Block, now, json_str, Fail, Trace
 from base.utils import read_binary_file, md5bytes
 
 
@@ -386,6 +386,6 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
             "succ": True,
             "uuid": uuid,
         }
-    except:
+    except Exception as e:
+        Trace("打包任务失败了", e)
         _update_state(process_url, worker, "fail")
-        Log("打包任务失败了")
