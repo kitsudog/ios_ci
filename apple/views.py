@@ -85,7 +85,7 @@ def _get_cert(_info: IosAccountInfo) -> IosCertInfo:
     if not cert:
         # todo: 生成证书
         pass
-    return Assert(cert, "缺少现成的开发[iOS App Development]证书[%s]" % info.account)
+    return Assert(cert, "缺少现成的开发[iOS App Development]证书[%s]" % _info.account)
 
 
 def _get_app(_config: IosAccountHelper, project: str) -> IosAppInfo:
@@ -510,20 +510,24 @@ def __add_task(_user: UserInfo):
     _task.state = "none"
     _task.worker = ""
     _task.save()
-    resign_ipa.delay(**{
-        "uuid": _user.uuid,
-        "cert": "iPhone Developer: %s" % _cert.name,
-        "cert_url": entry("/apple/download_cert?uuid=%s" % _user.uuid),
-        "cert_md5": md5bytes(base64decode(_cert.cert_p12)),
-        "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
-        "mp_md5": md5bytes(base64decode(_profile.profile)),
-        "project": _project.project,
-        "ipa_url": entry("/projects/%s/orig.ipa" % _user.project),
-        "ipa_md5": _project.md5sum,
-        "ipa_new": "%s_%s.ipa" % (_account.team_id, _account.devices_num),
-        "upload_url": entry("/apple/upload_ipa?uuid=%s" % _user.uuid),
-        "process_url": entry("/apple/task_state?uuid=%s" % _user.uuid),
-    })
+
+    def func():
+        resign_ipa.delay(**{
+            "uuid": _user.uuid,
+            "cert": "iPhone Developer: %s" % _cert.name,
+            "cert_url": entry("/apple/download_cert?uuid=%s" % _user.uuid),
+            "cert_md5": md5bytes(base64decode(_cert.cert_p12)),
+            "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
+            "mp_md5": md5bytes(base64decode(_profile.profile)),
+            "project": _project.project,
+            "ipa_url": entry("/projects/%s/orig.ipa" % _user.project),
+            "ipa_md5": _project.md5sum,
+            "ipa_new": "%s_%s.ipa" % (_account.team_id, _account.devices_num),
+            "upload_url": entry("/apple/upload_ipa?uuid=%s" % _user.uuid),
+            "process_url": entry("/apple/task_state?uuid=%s" % _user.uuid),
+        })
+
+    gevent.spawn(func)
 
 
 # noinspection PyShadowingNames
@@ -538,14 +542,17 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     if not udid:
         # todo: 验证来源
         with Block("提取udid", fail=False):
-            udid = re.compile(br"<key>UDID</key>\n\s+<string>(\w+)</string>").findall(_content)[0].decode("utf8")
+            udid = re.compile(br"<key>UDID</key>\n?\s*<string>(\w+)</string>").findall(_content)[0].decode("utf8")
     if not udid:
         # 提取udid失败后删除uuid
-        db_session.delete(_key)
+        if ide_debug():
+            pass
+        else:
+            db_session.delete(_key)
         return {
             "succ": False,
         }
-    for _user in UserInfo.objects.filter(udid=udid, project=_detail["project"]):
+    for _user in UserInfo.objects.filter(udid=udid, project=project):
         _account = _user.account
         if uuid != _user.uuid:
             Log("转移设备的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
