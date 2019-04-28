@@ -196,6 +196,7 @@ def _load_awwdrca():
     for each in _run("security find-certificate -a", succ_only=True):
         if "Apple Worldwide Developer Relations Certification Authority" in each:
             return True
+    Log("加载AppleWWDRCA")
     base = tempfile.gettempdir()
     _run("curl -sSLk https://developer.apple.com/certificationauthority/AppleWWDRCA.cer -o %s/AppleWWDRCA.cer" % base)
     _run("security add-certificates %s/AppleWWDRCA.cer" % base)
