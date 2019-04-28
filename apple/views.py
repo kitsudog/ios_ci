@@ -967,11 +967,11 @@ def info(_req: HttpRequest, project: str, uuid: str = ""):
 
     ret.update({
         "uuid": uuid,
+        "download_id": random_str(32),
     })
     rsp = JsonResponse({
         "ret": 0,
         "result": ret,
-        "download_id": random_str(32),
     })
     rsp.set_signed_cookie("uuid", uuid, salt="zhihu", expires=3600 * 24)
     if udid:
