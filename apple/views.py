@@ -546,7 +546,11 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     if not udid:
         # todo: 验证来源
         with Block("提取udid", fail=False):
-            udid = re.compile(br"<key>UDID</key>\n?\s*<string>(\w+)</string>").findall(_content)[0].decode("utf8")
+            tmp = re.compile(b"<key>UDID</key>\n?\s*<string>(.+?)</string>").findall(_content)
+            if tmp:
+                udid = tmp[0].decode("utf8")
+            else:
+                raise Fail("[%s]无法提取udid[%s]" % (uuid, _content))
     if not udid:
         # 提取udid失败后删除uuid
         if ide_debug():
