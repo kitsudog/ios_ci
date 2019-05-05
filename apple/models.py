@@ -167,6 +167,7 @@ class TaskInfo(models.Model):
         ("fail", "打包失败"),
         ("exception", "重大异常属于不能重试的类别"),
         ("expire", "打包超时"),
+        ("pass", "跳过任务"),
     ), help_text="当前任务的状态", default="ready")
     worker = models.CharField("打包终端", max_length=128, db_index=True, help_text="当前工作的打包机", default="none")
     size = models.IntegerField("包尺寸", default=0, help_text="ipa的尺寸, 打包完成后才会有")

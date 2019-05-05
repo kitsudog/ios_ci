@@ -288,7 +288,7 @@ def __list_all_cert(_config: IosAccountHelper):
 
 @Action
 def init_account(account: str):
-    _config = IosAccountHelper(IosAccountInfo.objects.filter(account=account).first())
+    _config = IosAccountHelper(IosAccountInfo.objects.get(account=account))
     __list_all_devices(_config)
     __list_all_app(_config, "")
     __list_all_cert(_config)
@@ -515,6 +515,11 @@ def __add_task(title: str, _user: UserInfo, force=False):
             filepath = "income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num)
             if os.path.exists(filepath):
                 Log("[%s][%s]已经有包了跳过打包" % (_user.project, _user.uuid))
+                _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
+                _task.state = "succ"
+                _task.worker = "-"
+                _task.expire = 0
+                _task.save()
                 return
     _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
     _task.state = "none"

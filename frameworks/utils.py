@@ -1,4 +1,5 @@
 import os
+from typing import Callable, Dict
 
 import gevent
 
@@ -38,6 +39,10 @@ def static_entry(path: str, follow_proto=False, proto="http") -> str:
         return "//%s%s" % (__STATIC_HOST, path)
     else:
         return "%s://%s%s" % (proto, __STATIC_HOST, path)
+
+
+def forward(action: Callable, params: Dict):
+    return action(params)
 
 
 class DbLock(ILock):

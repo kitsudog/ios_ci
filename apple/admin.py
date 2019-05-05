@@ -5,8 +5,9 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from apple.models import IosProjectInfo, IosAccountInfo, TaskInfo, IosProfileInfo, UserInfo
+from apple.utils import IosAccountHelper
 from apple.views import init_account, rebuild
-from frameworks.utils import static_entry
+from frameworks.utils import static_entry, forward
 
 admin.site.site_title = "打包后台"
 admin.site.site_header = "打包后台"
@@ -49,13 +50,14 @@ class IosProjectInfoAdmin(admin.ModelAdmin):
     human_md5sum.short_description = "项目状态"
 
 
+# noinspection PyMethodMayBeStatic
 @admin.register(IosAccountInfo)
 class IosAccountInfoAdmin(admin.ModelAdmin):
-    list_display = ('account', 'devices_num')
+    list_display = ('account', 'devices_num', 'human_valid')
     search_fields = ('account',)
     list_per_page = 10
     ordering = ('-devices_num',)
-    actions = ['init_project']
+    actions = ['action_init_project', 'action_login']
     fieldsets = (
         ['基本信息', {
             'fields': ('account', 'password'),
@@ -66,16 +68,26 @@ class IosAccountInfoAdmin(admin.ModelAdmin):
         }]
     )
 
-    # noinspection PyUnusedLocal
-    def init_project(self, request, queryset):
+    def human_valid(self, _info):
+        return bool(IosAccountHelper(_info).is_login)
+
+    human_valid.short_description = "已登录"
+
+    def action_login(self, request, queryset):
         _info = queryset.first()  # type: IosAccountInfo
-        # noinspection PyTypeChecker
-        init_account({
+        IosAccountHelper(_info).touch(force=True)
+        self.message_user(request, "执行完毕")
+
+    action_login.short_description = "重新登录"
+
+    def action_init_project(self, request, queryset):
+        _info = queryset.first()  # type: IosAccountInfo
+        forward(init_account, {
             "account": _info.account
         })
         self.message_user(request, "执行完毕")
 
-    init_project.short_description = "账号初始化"
+    action_init_project.short_description = "账号初始化"
 
 
 @admin.register(IosProfileInfo)
@@ -103,9 +115,22 @@ class TaskInfoAdmin(admin.ModelAdmin):
         if _info.state == "succ":
             ret = '成功'
             color_code = 'green'
+        elif _info.state == "pass":
+            ret = '跳过'
+            color_code = 'gray'
+        elif _info.state == "exception":
+            ret = '异常'
+            color_code = 'red'
         elif end_date >= datetime.now():
-            ret = '未过期'
-            color_code = 'green'
+            if _info.state == "none":
+                ret = '未认领'
+                color_code = 'blue'
+            elif _info.state == "fail":
+                ret = '失败'
+                color_code = 'red'
+            else:
+                ret = '打包中'
+                color_code = 'yellow'
         else:
             ret = '已过期'
             color_code = 'red'

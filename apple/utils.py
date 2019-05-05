@@ -211,7 +211,7 @@ class IosAccountHelper:
 
     @property
     def is_login(self):
-        return "myacinfo" in self.cookie and self.team_id and self.cookie
+        return "myacinfo" in self.cookie and self.team_id and self.cookie and self.info.csrf_ts > now()
 
     def __save_cookie(self, cookie: Dict):
         _orig = self.info.cookie
@@ -229,8 +229,11 @@ class IosAccountHelper:
         self.info.cookie = "{}"
         self.info.save()
 
-    def __login(self):
-        if self.csrf_ts > now():
+    def touch(self, force=False):
+        self.__login(force=force)
+
+    def __login(self, force=False):
+        if not force and self.csrf_ts > now():
             return
         with Block("账号登录", lock=DbLock("登录%s" % self.account)):
             ret = requests.post(
