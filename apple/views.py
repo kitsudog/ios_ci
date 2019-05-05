@@ -14,6 +14,7 @@ from OpenSSL import crypto
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse, StreamingHttpResponse
 
 from apple.tasks import resign_ipa, print_hello
+from base.helper import ipa_inspect
 from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug, str_json_a
 from base.utils import base64decode, md5bytes, base64, read_binary_file, random_str
 from frameworks.base import Action
@@ -738,6 +739,25 @@ def upload_project_ipa(project: str, file: bytes):
         _project.md5sum = md5bytes(file)
         _project.save()
         Log("更新工程[%s]的ipa[%s]" % (project, _project.md5sum))
+    with Block("提取app信息"):
+        _info = ipa_inspect.info(file)
+        comments = str_json(_project.comments)
+        with Block("导出图标", fail=False):
+            if _info.icon:
+                with open(os.path.join(base, "icon.png"), mode="wb") as fout:
+                    fout.write(_info.icon[-1])
+            comments.update({
+                "icon": static_entry("income/%s/icon.png" % project),
+            })
+        comments.update({
+            "name": _info.name,
+            "version": _info.CFBundleVersion,
+        })
+        if json_str(comments) != _project.comments:
+            Log("更新项目的详情[%s][%s]=>[%s]" % (project, _project.comments, json_str(comments)))
+            _project.comments = json_str(comments)
+            _project.save()
+
     # todo: 激活更新一下
     return {
         "succ": True,
@@ -1118,7 +1138,7 @@ def test():
 def download_process(_req: HttpRequest, download_id: str, timeout=3000, last: int = 0, start: int = 0):
     if os.environ.get("FORCE_CDN"):
         if download_id not in __download_total:
-            if os.path.exists(__download_file[download_id]):
+            if download_id in __download_file and os.path.exists(__download_file[download_id]):
                 # todo: 需要考虑断点上传
                 gevent.sleep(timeout / 1000)
                 __download_total[download_id] = os.path.getsize(__download_file[download_id])
