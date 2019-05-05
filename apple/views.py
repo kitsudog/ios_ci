@@ -508,6 +508,14 @@ def __add_task(title: str, _user: UserInfo, force=False):
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
     Assert(_cert.cert_p12, "项目[%s]p12还没上传" % _project.project)
+    if not force:
+        # 是否可以跳过
+        devices = str_json_a(_profile.devices)
+        if _user.udid in devices:
+            filepath = "income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num)
+            if os.path.exists(filepath):
+                Log("[%s][%s]已经有包了跳过打包" % (_user.project, _user.uuid))
+                return
     _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
     _task.state = "none"
     _task.worker = ""
