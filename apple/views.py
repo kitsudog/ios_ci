@@ -796,6 +796,10 @@ def upload_ipa(worker: str, uuid: str, file: bytes):
     }
 
 
+__download_file = {
+
+}
+
 __download_total = {
 
 }
@@ -846,8 +850,7 @@ def manifest(uuid: str, need_process=True, download_id: str = ""):
     _project = IosProjectInfo.objects.get(project=_user.project)
     _app = IosAppInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
     _comments = str_json(_project.comments)
-    __download_total[download_id] = os.path.getsize(
-        os.path.join("income", _project.project, "%s_%s.ipa" % (_account.team_id, _account.devices_num)))
+    __download_file[download_id] = os.path.join("income", _project.project, "%s_%s.ipa" % (_account.team_id, _account.devices_num))
 
     if os.environ.get("FORCE_CDN", "FALSE") == "TRUE":
         need_process = False
@@ -1115,7 +1118,12 @@ def test():
 def download_process(_req: HttpRequest, download_id: str, timeout=3000, last: int = 0, start: int = 0):
     if os.environ.get("FORCE_CDN"):
         if download_id not in __download_total:
-            gevent.sleep(timeout / 1000)
+            if os.path.exists(__download_file[download_id]):
+                # todo: 需要考虑断点上传
+                gevent.sleep(timeout / 1000)
+                __download_total[download_id] = os.path.getsize(__download_file[download_id])
+            else:
+                gevent.sleep(timeout / 1000)
             return {
                 "code": 0,
                 "progress": 0,

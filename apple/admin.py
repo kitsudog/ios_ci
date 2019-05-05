@@ -101,14 +101,21 @@ class IosProfileInfoAdmin(admin.ModelAdmin):
     )
 
 
+# noinspection PyMethodMayBeStatic
 @admin.register(TaskInfo)
 class TaskInfoAdmin(admin.ModelAdmin):
     list_filter = ['state']
     search_fields = ('uuid', 'worker')
-    list_display = ('uuid', 'worker', 'size', 'human_state', 'human_expire')
+    list_display = ('uuid', 'human_detail', 'worker', 'size', 'human_state', 'human_expire')
     date_hierarchy = 'expire'
 
     # fk_fields = ('uuid',)
+
+    def human_detail(self, _info: TaskInfo):
+        _user = UserInfo.objects.get(uuid=_info.uuid)
+        return _user.project
+
+    human_detail.short_description = '任务细节'
 
     def human_expire(self, _info: TaskInfo):
         end_date = _info.expire
@@ -141,6 +148,7 @@ class TaskInfoAdmin(admin.ModelAdmin):
         )
 
     human_expire.short_description = '是否已过期'
+
     human_expire.admin_order_field = 'expire'
 
     def human_state(self, _info):
