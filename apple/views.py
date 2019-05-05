@@ -744,7 +744,7 @@ def upload_project_ipa(project: str, file: bytes):
         comments = str_json(_project.comments)
         with Block("导出图标", fail=False):
             if _info.icon:
-                with open(os.path.join(base, "icon.png"), mode="wb") as fout:
+                with open(os.path.join("income", project, "icon.png"), mode="wb") as fout:
                     fout.write(_info.icon[-1])
             comments.update({
                 "icon": static_entry("income/%s/icon.png" % project),
