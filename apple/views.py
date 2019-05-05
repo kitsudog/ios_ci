@@ -502,6 +502,8 @@ def __add_task(title: str, _user: UserInfo):
     _account = IosAccountInfo.objects.get(account=_user.account)
     _project = IosProjectInfo.objects.get(project=_user.project)
     _profile = IosProfileInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
+    if not str_json_a(_profile.certs):
+        __profile_detail(_account, _profile)
     _cert = IosCertInfo.objects.get(sid="%s:%s" % (_user.account, str_json_a(_profile.certs)[0]))
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
@@ -763,11 +765,12 @@ def upload_ipa(worker: str, uuid: str, file: bytes):
     os.makedirs(base, exist_ok=True)
     _info = IosAccountInfo.objects.filter(account=account).first()  # type:IosAccountInfo
     Assert(_info, "账号[%s]不存在" % account)
+    md5 = md5bytes(file)
     filename = "%s_%s.ipa" % (_info.team_id, _info.devices_num)
     with open(os.path.join(base, filename), mode="wb") as fout:
         fout.write(file)
 
-    Log("[%s]收到新打包的ipa[%s]" % (account, filename))
+    Log("[%s]收到新打包的ipa[%s][%s]" % (account, filename, md5))
     # todo: 遍历所有的设备关联的包?
     _task, _ = TaskInfo.objects.get_or_create(uuid=uuid)
     if _task.worker in {worker, "none"}:
@@ -830,6 +833,8 @@ def manifest(uuid: str, need_process=True, download_id: str = ""):
     _project = IosProjectInfo.objects.get(project=_user.project)
     _app = IosAppInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
     _comments = str_json(_project.comments)
+    __download_total[download_id] = os.path.getsize(
+        os.path.join("income", _project.project, "%s_%s.ipa" % (_account.team_id, _account.devices_num)))
 
     if os.environ.get("FORCE_CDN", "FALSE") == "TRUE":
         need_process = False
@@ -1094,35 +1099,44 @@ def test():
 
 
 @Action
-def download_process(_req: HttpRequest, download_id: str, timeout=3000, last: int = 0, ):
-    if download_id not in __download_process:
-        gevent.sleep(timeout / 1000)
-        return {
-            "code": 0,
-            "progress": 0,
-            "total": 1,
-        }
-    else:
-        orig = last or __download_process[download_id]
+def download_process(_req: HttpRequest, download_id: str, timeout=3000, last: int = 0, start: int = 0):
+    if os.environ.get("FORCE_CDN"):
+        # 假设速度为 500k/s
         total = __download_total[download_id]
-        if orig == total:
-            return {
-                "code": 0,
-                "progress": total,
-                "total": total,
-            }
-        expire = (now() + timeout) if timeout > 0 else (now() + 30 * 1000)
-        while now() < expire:
-            if __download_process[download_id] == orig:
-                gevent.sleep(1)
-            else:
-                # 进度有变化就马上回去
-                break
         return {
             "code": 0,
-            "progress": __download_process[download_id],
+            "progress": min(total, int(500000 * (now() - start) / 1000.0)),
             "total": total,
         }
+    else:
+        if download_id not in __download_process:
+            gevent.sleep(timeout / 1000)
+            return {
+                "code": 0,
+                "progress": 0,
+                "total": 1,
+            }
+        else:
+            orig = last or __download_process[download_id]
+            total = __download_total[download_id]
+            if orig == total:
+                return {
+                    "code": 0,
+                    "progress": total,
+                    "total": total,
+                }
+            expire = (now() + timeout) if timeout > 0 else (now() + 30 * 1000)
+            while now() < expire:
+                if __download_process[download_id] == orig:
+                    gevent.sleep(1)
+                else:
+                    # 进度有变化就马上回去
+                    break
+            return {
+                "code": 0,
+                "progress": __download_process[download_id],
+                "total": total,
+            }
 
 
 if ide_debug():

@@ -389,6 +389,7 @@ def resign_ipa(self: Task, uuid: str, cert: str, cert_url: str, cert_md5: str, m
         with Block("上传"):
             _update_state(process_url, worker, "upload_ipa")
             Log("上传ipa[%s][%s]" % (project, upload_url))
+            # todo: 断点续传
             rsp = requests.post(upload_url, files={
                 "worker": worker,
                 "file": read_binary_file(file_new),
