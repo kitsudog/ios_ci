@@ -7,6 +7,7 @@ import time
 from subprocess import call
 from typing import Dict, Callable
 
+import biplist
 import gevent
 import requests
 from OpenSSL import crypto
@@ -534,6 +535,30 @@ def __add_task(title: str, _user: UserInfo):
         func()
 
 
+ffi = None
+
+
+# noinspection PyProtectedMember,PyBroadException
+def __process_signed_plist(data: bytes) -> Dict:
+    try:
+        global ffi
+        if not ffi:
+            from cffi import FFI
+
+            ffi = FFI()
+        p7 = crypto.load_pkcs7_data(crypto.FILETYPE_ASN1, data)
+        out = crypto._new_mem_buf()
+        if crypto._lib.PKCS7_verify(p7._pkcs7, ffi.NULL, ffi.NULL, ffi.NULL, out, crypto._lib.PKCS7_NOVERIFY):
+            return biplist.readPlistFromString(crypto._bio_to_string(out))
+    except:
+        try:
+            return {
+                "UDID": re.compile(b"<key>UDID</key>\n?\s*<string>(.+?)</string>").findall(data)[0].decode("utf8")
+            }
+        except:
+            raise Fail("无法解读plist[%s]" % data)
+
+
 # noinspection PyShadowingNames
 @Action
 def add_device(_content: bytes, uuid: str, udid: str = ""):
@@ -546,11 +571,7 @@ def add_device(_content: bytes, uuid: str, udid: str = ""):
     if not udid:
         # todo: 验证来源
         with Block("提取udid", fail=False):
-            tmp = re.compile(b"<key>UDID</key>\n?\s*<string>(.+?)</string>").findall(_content)
-            if tmp:
-                udid = tmp[0].decode("utf8")
-            else:
-                raise Fail("[%s]无法提取udid[%s]" % (uuid, _content))
+            udid = __process_signed_plist(_content)["UDID"]
     if not udid:
         # 提取udid失败后删除uuid
         if ide_debug():
@@ -809,6 +830,10 @@ def manifest(uuid: str, need_process=True, download_id: str = ""):
     _project = IosProjectInfo.objects.get(project=_user.project)
     _app = IosAppInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
     _comments = str_json(_project.comments)
+
+    if os.environ.get("FORCE_CDN", "FALSE") == "TRUE":
+        need_process = False
+
     content = """\
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
