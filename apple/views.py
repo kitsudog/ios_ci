@@ -498,7 +498,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
     return True
 
 
-def __add_task(title: str, _user: UserInfo):
+def __add_task(title: str, _user: UserInfo, force=False):
     _account = IosAccountInfo.objects.get(account=_user.account)
     _project = IosProjectInfo.objects.get(project=_user.project)
     _profile = IosProfileInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
@@ -1057,7 +1057,7 @@ _states = ["ready", "prepare_env", "prepare_cert", "prepare_mp", "prepare_ipa", 
 @Action
 def rebuild(uuid: str):
     _user = UserInfo.objects.get(uuid=uuid)
-    __add_task("管理后台重启", _user)
+    __add_task("管理后台重启", _user, force=True)
     return {
         "succ": True,
     }
