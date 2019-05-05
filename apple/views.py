@@ -1114,13 +1114,21 @@ def test():
 @Action
 def download_process(_req: HttpRequest, download_id: str, timeout=3000, last: int = 0, start: int = 0):
     if os.environ.get("FORCE_CDN"):
-        # 假设速度为 500k/s
-        total = __download_total[download_id]
-        return {
-            "code": 0,
-            "progress": min(total, int(500000 * (now() - start) / 1000.0)),
-            "total": total,
-        }
+        if download_id not in __download_total:
+            gevent.sleep(timeout / 1000)
+            return {
+                "code": 0,
+                "progress": 0,
+                "total": 1,
+            }
+        else:
+            # 假设速度为 500k/s
+            total = __download_total[download_id]
+            return {
+                "code": 0,
+                "progress": min(total, int(500000 * (now() - start) / 1000.0)),
+                "total": total,
+            }
     else:
         if download_id not in __download_process:
             gevent.sleep(timeout / 1000)
