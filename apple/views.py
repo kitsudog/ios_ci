@@ -731,8 +731,9 @@ def login_by_curl(_req: HttpRequest, cmd: str = "", account: str = ""):
 @Action
 def upload_project_ipa(project: str, file: bytes):
     _project = IosProjectInfo.objects.get(project=project)
-    base = os.path.join("static/projects", project)
+    base = os.path.join("static", "projects", project)
     os.makedirs(base, exist_ok=True)
+    os.makedirs(os.path.join("static", "income", project), exist_ok=True)
     with open(os.path.join(base, "orig.ipa"), mode="wb") as fout:
         fout.write(file)
     if _project.md5sum != md5bytes(file):
@@ -744,7 +745,7 @@ def upload_project_ipa(project: str, file: bytes):
         comments = str_json(_project.comments)
         with Block("导出图标", fail=False):
             if _info.icon:
-                with open(os.path.join("income", project, "icon.png"), mode="wb") as fout:
+                with open(os.path.join("static", "income", project, "icon.png"), mode="wb") as fout:
                     fout.write(_info.icon[-1])
             comments.update({
                 "icon": static_entry("income/%s/icon.png" % project),
