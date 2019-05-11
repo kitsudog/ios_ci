@@ -2,6 +2,7 @@
 import datetime
 import os
 import re
+import sys
 import tempfile
 import time
 from subprocess import call
@@ -13,10 +14,10 @@ import requests
 from OpenSSL import crypto
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse, StreamingHttpResponse
 
-from apple.tasks import resign_ipa, print_hello
+from apple.tasks import resign_ipa, print_hello, _shell_run
 from base.helper import ipa_inspect
 from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug, str_json_a
-from base.utils import base64decode, md5bytes, base64, read_binary_file, random_str
+from base.utils import base64decode, md5bytes, base64, read_binary_file, random_str, write_file
 from frameworks.base import Action
 from frameworks.db import db_session, message_from_topic
 from frameworks.utils import entry, static_entry
@@ -509,6 +510,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
     Assert(_cert.cert_p12, "项目[%s]p12还没上传" % _project.project)
+
     if not force:
         # 是否可以跳过
         devices = str_json_a(_profile.devices)
@@ -522,33 +524,64 @@ def __add_task(title: str, _user: UserInfo, force=False):
                 _task.expire = 0
                 _task.save()
                 return
-    _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
-    _task.state = "none"
-    _task.worker = ""
-    _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
-    _task.save()
-    Log("[%s]发布任务[%s][%s][%s]" % (_user.project, _user.account, title, _user.udid))
 
-    def func():
-        resign_ipa.delay(**{
-            "uuid": _user.uuid,
-            "cert": "iPhone Developer: %s" % _cert.name,
-            "cert_url": entry("/apple/download_cert?uuid=%s" % _user.uuid),
-            "cert_md5": md5bytes(base64decode(_cert.cert_p12)),
-            "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
-            "mp_md5": md5bytes(base64decode(_profile.profile)),
-            "project": _project.project,
-            "ipa_url": entry("/projects/%s/orig.ipa" % _user.project),
-            "ipa_md5": _project.md5sum,
-            "ipa_new": "%s_%s.ipa" % (_account.team_id, _account.devices_num),
-            "upload_url": entry("/apple/upload_ipa?uuid=%s" % _user.uuid),
-            "process_url": entry("/apple/task_state?uuid=%s" % _user.uuid),
-        })
+    if str_json(_project.comments).get("au") and sys.platform == "linux":
 
-    if ide_debug():
-        gevent.spawn(func)
+        def __au_pack():
+            with Block("写入cert"):
+                file = "./projects/%s/cert.p12" % _user.project
+                if os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
+                    write_file(file, base64decode(_cert.cert_p12))
+            with Block("写入mobileprovision"):
+                file = "./projects/%s/latest.mobileprovision" % _user.project
+                if os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
+                    write_file(file, base64decode(_profile.profile))
+            _shell_run("./tools/au_ipa_signer_linux/au_ipa_signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
+                "./projects/%s/orig.ipa" % _user.project,
+                "./projects/%s/cert.p12" % _user.project,
+                "./projects/%s/latest.mobileprovision" % _user.project,
+                "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num),
+            ), succ_only=True, verbose=True)
+            # noinspection PyShadowingNames
+            _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
+            _task.state = "none"
+            _task.worker = "Local"
+            _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
+            _task.save()
+
+        # 本地打包
+        if ide_debug():
+            gevent.spawn(__au_pack)
+        else:
+            __au_pack()
     else:
-        func()
+        _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
+        _task.state = "none"
+        _task.worker = ""
+        _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
+        _task.save()
+        Log("[%s]发布任务[%s][%s][%s]" % (_user.project, _user.account, title, _user.udid))
+
+        def func():
+            resign_ipa.delay(**{
+                "uuid": _user.uuid,
+                "cert": "iPhone Developer: %s" % _cert.name,
+                "cert_url": entry("/apple/download_cert?uuid=%s" % _user.uuid),
+                "cert_md5": md5bytes(base64decode(_cert.cert_p12)),
+                "mp_url": entry("/apple/download_mp?uuid=%s" % _user.uuid),
+                "mp_md5": md5bytes(base64decode(_profile.profile)),
+                "project": _project.project,
+                "ipa_url": entry("/projects/%s/orig.ipa" % _user.project),
+                "ipa_md5": _project.md5sum,
+                "ipa_new": "%s_%s.ipa" % (_account.team_id, _account.devices_num),
+                "upload_url": entry("/apple/upload_ipa?uuid=%s" % _user.uuid),
+                "process_url": entry("/apple/task_state?uuid=%s" % _user.uuid),
+            })
+
+        if ide_debug():
+            gevent.spawn(func)
+        else:
+            func()
 
 
 ffi = None
