@@ -745,6 +745,7 @@ def upload_project_ipa(project: str, file: bytes):
         comments = str_json(_project.comments)
         with Block("导出图标", fail=False):
             if _info.icon:
+                # todo: 调整为合适的图标尺寸
                 with open(os.path.join("static", "income", project, "icon.png"), mode="wb") as fout:
                     fout.write(_info.icon[-1])
             comments.update({

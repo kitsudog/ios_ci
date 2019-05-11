@@ -13,9 +13,30 @@ then
     python3.6 -m pip install --trusted-host mirrors.aliyun.com -i http://mirrors.aliyun.com/pypi/simple -I uwsgi
 fi
 
+MYSQL_OPTION=" -h ${MYSQL_HOST:-127.0.0.1} -u root ${MYSQL_DATABASE:-db} --default-character-set=utf8 "
+MYSQL_EXEC="mysql $MYSQL_OPTION "
+
+$MYSQL_EXEC -e 'CREATE TABLE IF NOT EXISTS `__migrations` (`id` int(11) NOT NULL,`content` mediumblob)'
+$MYSQL_EXEC -e 'INSERT INTO `__migrations` VALUES (1,"1");' >/dev/null 2>&1
+
+function load_migrations()
+{
+    $MYSQL_EXEC -e 'SELECT `content` FROM `__migrations` LIMIT 1' -s |tail -n+1|base64 -d|tar zxv
+}
+
+function backup_migrations()
+{
+    files=`find . -type d -iname migrations`
+    $MYSQL_EXEC -e "UPDATE \`__migrations\` SET \`content\`='`tar zcv $files | base64 -w0`';"
+}
+
+load_migrations
+
 python3.6 manage.py collectstatic --no-input
 python3.6 manage.py makemigrations --noinput
 python3.6 manage.py migrate
+
+backup_migrations
 
 if [[ ${FLOWER_ONLY:-FALSE} = "TRUE" ]]
 then
