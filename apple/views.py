@@ -509,6 +509,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
     _cert = IosCertInfo.objects.get(sid="%s:%s" % (_user.account, str_json_a(_profile.certs)[0]))
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
+    Assert(os.path.exists("./static/projects/%s/orig.ipa" % _user.project), "项目[%s]原始ipa还没上传" % _project.project)
     Assert(_cert.cert_p12, "项目[%s]p12还没上传" % _project.project)
 
     if not force:
@@ -529,17 +530,17 @@ def __add_task(title: str, _user: UserInfo, force=False):
 
         def __au_pack():
             with Block("写入cert"):
-                file = "./projects/%s/cert.p12" % _user.project
+                file = "./static/projects/%s/cert.p12" % _user.project
                 if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
                     write_file(file, base64decode(_cert.cert_p12))
             with Block("写入mobileprovision"):
-                file = "./projects/%s/latest.mobileprovision" % _user.project
+                file = "./static/projects/%s/latest.mobileprovision" % _user.project
                 if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
                     write_file(file, base64decode(_profile.profile))
             _shell_run("./tools/au_ipa_signer_linux/au_ipa_signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
-                "./projects/%s/orig.ipa" % _user.project,
-                "./projects/%s/cert.p12" % _user.project,
-                "./projects/%s/latest.mobileprovision" % _user.project,
+                "./static/projects/%s/orig.ipa" % _user.project,
+                "./static/projects/%s/cert.p12" % _user.project,
+                "./static/projects/%s/latest.mobileprovision" % _user.project,
                 "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num),
             ), succ_only=True, verbose=True)
             # noinspection PyShadowingNames
