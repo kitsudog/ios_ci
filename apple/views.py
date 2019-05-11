@@ -530,11 +530,11 @@ def __add_task(title: str, _user: UserInfo, force=False):
         def __au_pack():
             with Block("写入cert"):
                 file = "./projects/%s/cert.p12" % _user.project
-                if os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
+                if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
                     write_file(file, base64decode(_cert.cert_p12))
             with Block("写入mobileprovision"):
                 file = "./projects/%s/latest.mobileprovision" % _user.project
-                if os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
+                if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
                     write_file(file, base64decode(_profile.profile))
             _shell_run("./tools/au_ipa_signer_linux/au_ipa_signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
                 "./projects/%s/orig.ipa" % _user.project,
