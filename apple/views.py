@@ -1170,11 +1170,12 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
             if _task.state == "fail" or _task.expire.timestamp() * 1000 < now():
                 # noinspection PyUnboundLocalVariable
                 __add_task("客户端重启任务", _user)
-
+        Log("项目[%s]有一个udid[%s]访问" % (udid, project))
     else:
         ret.update({
             "ready": False,
         })
+        Log("项目[%s]有一个访问" % project)
 
     ret.update({
         "uuid": uuid,
