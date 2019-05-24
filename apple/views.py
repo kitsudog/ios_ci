@@ -1169,6 +1169,7 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
 
     ret.update({
         "uuid": uuid,
+        "udid": udid,
         "download_id": random_str(32),
     })
     rsp = JsonResponse({
@@ -1179,7 +1180,9 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
     })
     rsp.set_cookie("uuid", __encrypt(uuid), expires=3600 * 24)
     if udid:
-        rsp.set_cookie("udid", __encrypt(udid), expires=300 * 3600 * 24)
+        rsp.set_cookie("udid", __encrypt(udid), expires=365 * 3600 * 24)
+    else:
+        rsp.set_cookie("udid", "", expires=365 * 3600 * 24)
     return rsp
 
 
