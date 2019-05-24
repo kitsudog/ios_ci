@@ -69,7 +69,7 @@ class IosAccountInfoAdmin(admin.ModelAdmin):
     )
 
     def human_valid(self, _info):
-        return bool(IosAccountHelper(_info).is_login)
+        return str(IosAccountHelper(_info).is_login)
 
     human_valid.short_description = "已登录"
 

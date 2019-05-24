@@ -10,7 +10,7 @@ import gevent
 import requests
 from requests import Timeout
 
-from base.style import str_json, now, to_form_url, Assert, Log, json_str, Fail, str_json_i, Block
+from base.style import str_json, now, to_form_url, Assert, Log, json_str, Fail, str_json_i, Block, ExFalse
 from base.utils import base64, base64decode
 from frameworks.db import db_session, message_from_topic
 # noinspection PyProtectedMember
@@ -210,17 +210,15 @@ class IosAccountHelper:
             raise e
 
     @property
-    def is_login(self):
+    def is_login(self) -> ExFalse:
         if "myacinfo" not in self.cookie:
-            # 完全没有登录信息
-            return False
+            return ExFalse("未登录")
         if int(self.cookie.get("__expire", 0)) < now():
             # 登录信息已经过期需要刷新
-            return False
+            return ExFalse("登录过期")
         if not self.team_id:
-            # 没有登录过 team_id 尚为空
-            return False
-        return True
+            return ExFalse("team_id缺失")
+        return ExFalse.TRUE
 
     def __save_cookie(self, cookie: Dict):
         _orig = self.info.cookie
