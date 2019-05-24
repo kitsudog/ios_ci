@@ -59,6 +59,8 @@ def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str,
 
 
 def _new_device(udid: str, product: str, imei: str):
+    Assert(bool(udid), "udid无效")
+    # todo: 更正式的udid验证
     _info, _ = DeviceInfo.objects.get_or_create(udid=udid)
     if _:
         Log("新的ios设备[%s][%s]" % (udid, product))
@@ -73,6 +75,7 @@ def _new_device(udid: str, product: str, imei: str):
             dirty = True
     if dirty:
         _info.save()
+    return udid
 
 
 def _reg_device(account: str, device_id: str, udid: str, model: str, sn: str) -> str:
@@ -672,7 +675,7 @@ def add_device(_content: bytes, uuid: str, udid: str = "", project: str = ""):
             # todo: 验证来源
             with Block("提取udid", fail=False):
                 content = __process_signed_plist(_content)
-                _new_device(content["UDID"], product=content.get("PRODUCT"), imei=content.get("IMEI"))
+                udid = _new_device(content["UDID"], product=content.get("PRODUCT"), imei=content.get("IMEI"))
         if not _detail:
             raise Fail("无效的uuid[%s]转发至test工程" % uuid)
         project = _detail["project"]
