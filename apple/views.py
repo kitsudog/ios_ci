@@ -528,27 +528,35 @@ def __add_task(title: str, _user: UserInfo, force=False):
 
     if str_json(_project.comments).get("au") and sys.platform == "linux":
 
+        # noinspection PyBroadException
         def __au_pack():
-            with Block("写入cert"):
-                file = "./static/projects/%s/cert.p12" % _user.project
-                if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
-                    write_file(file, base64decode(_cert.cert_p12))
-            with Block("写入mobileprovision"):
-                file = "./static/projects/%s/latest.mobileprovision" % _user.project
-                if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
-                    write_file(file, base64decode(_profile.profile))
-            _shell_run("./tools/au_ipa_signer_linux/au_ipa_signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
-                "./static/projects/%s/orig.ipa" % _user.project,
-                "./static/projects/%s/cert.p12" % _user.project,
-                "./static/projects/%s/latest.mobileprovision" % _user.project,
-                "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num),
-            ), succ_only=True, verbose=True)
-            # noinspection PyShadowingNames
             _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
-            _task.state = "none"
+            _task.state = "ready"
             _task.worker = "Local"
             _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
             _task.save()
+            try:
+                with Block("写入cert"):
+                    file = "./static/projects/%s/cert.p12" % _user.project
+                    if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
+                        write_file(file, base64decode(_cert.cert_p12))
+                with Block("写入mobileprovision"):
+                    file = "./static/projects/%s/latest.mobileprovision" % _user.project
+                    if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
+                        write_file(file, base64decode(_profile.profile))
+                _shell_run("./tools/au_ipa_signer_linux/au_ipa_signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
+                    "./static/projects/%s/orig.ipa" % _user.project,
+                    "./static/projects/%s/cert.p12" % _user.project,
+                    "./static/projects/%s/latest.mobileprovision" % _user.project,
+                    "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num),
+                ), succ_only=True, verbose=True)
+                # noinspection PyShadowingNames
+                _task.state = "succ"
+                _task.save()
+            except Exception as e:
+                Trace("本地au打包失败", e)
+                _task.state = "fail"
+                _task.save()
 
         # 本地打包
         if ide_debug():

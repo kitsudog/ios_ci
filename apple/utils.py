@@ -211,7 +211,16 @@ class IosAccountHelper:
 
     @property
     def is_login(self):
-        return "myacinfo" in self.cookie and self.team_id and self.cookie and self.info.csrf_ts > now()
+        if "myacinfo" not in self.cookie:
+            # 完全没有登录信息
+            return False
+        if int(self.cookie.get("__expire", 0)) < now():
+            # 登录信息已经过期需要刷新
+            return False
+        if not self.team_id:
+            # 没有登录过 team_id 尚为空
+            return False
+        return True
 
     def __save_cookie(self, cookie: Dict):
         _orig = self.info.cookie
@@ -224,7 +233,6 @@ class IosAccountHelper:
     def __logout(self):
         Log("登出账号[%s]" % self.account)
         _key = "apple:developer:cookie"
-        self.__expire = 0
         self.cookie.clear()
         self.info.cookie = "{}"
         self.info.save()
@@ -290,7 +298,9 @@ class IosAccountHelper:
                     _wait_code(self.info, self.session, now())
 
                 self.cookie.update(self.session.cookies)
-                self.__expire = now() + 3600 * 1000
+                self.cookie.update({
+                    "__expire": str(now() + 3600 * 1000),
+                })
         if not self.team_id:
             ret = requests.post(
                 "https://developer.apple.com/services-account/QH65B2/account/getTeams",
