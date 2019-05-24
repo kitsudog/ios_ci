@@ -553,6 +553,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
         _task.worker = "Local"
         _task.expire = datetime.datetime.fromtimestamp((now() + 60 * 1000) // 1000)
         _task.save()
+        Log("[%s]发布本地任务[%s][%s][%s]" % (_user.project, _user.account, title, _user.udid))
 
         if sys.platform == "linux":
             # noinspection PyBroadException
@@ -1152,7 +1153,7 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
             ready = False
     else:
         if udid:
-            _user = UserInfo.objects.filter(udid=udid, project=project)
+            _user = UserInfo.objects.filter(udid=udid, project=project).first()
         if _user:
             Log("采用已经存在的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
             uuid = _user.uuid
