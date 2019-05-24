@@ -52,7 +52,7 @@ def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str,
     _info.type_str = type_str
     _info.name = name
     _info.create = now()
-    _info.expire = datetime.datetime.utcfromtimestamp(expire // 1000)
+    _info.expire = datetime.datetime.fromtimestamp(expire // 1000)
     _info.save()
     Log("更新证书[%s][%s]" % (name, cert_req_id))
     return cert_req_id
@@ -103,7 +103,7 @@ def _reg_device(account: str, device_id: str, udid: str, model: str, sn: str) ->
 def _get_cert(_info: IosAccountInfo) -> IosCertInfo:
     cert = IosCertInfo.objects.filter(
         account=_info.account,
-        expire__gt=datetime.datetime.utcfromtimestamp(now() // 1000),
+        expire__gt=datetime.datetime.fromtimestamp(now() // 1000),
         type_str="development",
     ).first()  # type: IosCertInfo
     if not cert:
@@ -551,7 +551,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
         _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
         _task.state = "ready"
         _task.worker = "Local"
-        _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
+        _task.expire = datetime.datetime.fromtimestamp((now() + 60 * 1000) // 1000)
         _task.save()
 
         if sys.platform == "linux":
@@ -606,7 +606,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
         else:
             raise Fail("暂不支持")
 
-        gevent.spawn(__au_pack)
+        __au_pack()
     else:
         _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
         _task.state = "none"
@@ -631,7 +631,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
                 "process_url": entry("/apple/task_state?uuid=%s" % _user.uuid),
             })
 
-        gevent.spawn(func)
+        func()
 
 
 ffi = None
