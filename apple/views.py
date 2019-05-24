@@ -607,7 +607,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
         else:
             raise Fail("暂不支持")
 
-        __au_pack()
+        gevent.spawn(__au_pack)
     else:
         _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
         _task.state = "none"
