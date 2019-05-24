@@ -701,9 +701,9 @@ def add_device(_content: bytes, uuid: str, udid: str = "", project: str = ""):
         _user.save()
         __add_task("新客户端启动任务", _user)
     if project:
-        return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s&udid=%s" % (project, uuid, udid)))
+        return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s&udid=%s" % (project, __encrypt(uuid), __encrypt(udid))))
     else:
-        return HttpResponsePermanentRedirect(entry("/detail.php?project=test&udid=%s" % udid))
+        return HttpResponsePermanentRedirect(entry("/detail.php?project=test&udid=%s" % __encrypt(udid)))
 
 
 @Action
@@ -1113,7 +1113,8 @@ def __decrypt(src: str) -> str:
 
 @Action
 def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
-    udid = __decrypt(udid)
+    udid = __decrypt(udid or _req.COOKIES.get("udid"))
+    uuid = __decrypt(uuid)
 
     _project = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
     if not _project:
@@ -1123,21 +1124,31 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
     ret = str_json(_project.comments)
     ready = False
 
-    if uuid:
-        # 检验uuid是否有效
-        _user = UserInfo.objects.filter(uuid=uuid).first()  # type: Optional[UserInfo]
-        if _user:
-            if udid:
-                if _user.udid:
-                    if udid != _user.udid:
-                        Log("冒用别人的uuid重新分配一个[%s]")
-                        ready = False
-                else:
-                    _user.udid = udid
-                    _user.save()
-                    ready = True
+    if not uuid:
+        uuid = _newbee(_project)
+
+    # 检验uuid是否有效
+    _user = UserInfo.objects.filter(uuid=uuid).first()  # type: Optional[UserInfo]
+    if _user:
+        if udid:
+            if _user.udid:
+                if udid != _user.udid:
+                    Log("冒用别人的uuid重新分配一个[%s]")
+                    uuid = _newbee(_project)
+                    ready = False
             else:
-                ready = False
+                _user.udid = udid
+                _user.save()
+                ready = True
+        else:
+            ready = False
+    else:
+        if udid:
+            _user = UserInfo.objects.filter(udid=udid, project=project)
+        if _user:
+            Log("采用已经存在的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
+            uuid = _user.uuid
+            ready = True
         else:
             ready = ExFalse("上传的uuid无效[%s]" % uuid, log=True)
 
@@ -1152,7 +1163,6 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
                 __add_task("客户端重启任务", _user)
 
     else:
-        uuid = _newbee(_project)
         ret.update({
             "ready": False,
         })
