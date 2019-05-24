@@ -84,7 +84,7 @@ def get_capability(cate: str):
         raise Fail("不支持的capability[%s]" % cate)
 
 
-def _wait_code(info: IosAccountInfo, session: requests.Session, ts):
+def _wait_code(info: IosAccountInfo, session: requests.Session, ts, save_now=False):
     """
     等待二次提交的需要
     """
@@ -116,8 +116,12 @@ def _wait_code(info: IosAccountInfo, session: requests.Session, ts):
                     #     continue
                     rsp = session.get("https://idmsa.apple.com/appleauth/auth/2sv/trust")
                     if rsp.status_code == 204:
-                        info.cookie = json_str(session.cookies)
-                        info.save()
+                        session.cookies.update({
+                            "__expire": str(now() + 6 * 3600 * 1000)
+                        })
+                        if save_now:
+                            info.cookie = json_str(session.cookies)
+                            info.save()
                         Log("账号[%s]登录成功" % info.account)
                         return session
     raise Fail("登录二次验证超时")
@@ -294,11 +298,13 @@ class IosAccountHelper:
                     Assert(rsp.status_code == 200, "[%s]短信发送失败" % self.account)
                     # Log("===> https://idmsa.apple.com/appleauth/auth/verify/phone [%s] %s" % (rsp.status_code, rsp.json()))
                     _wait_code(self.info, self.session, now())
+                else:
+                    self.session.cookies.update({
+                        "__expire": str(now() + 6 * 3600 * 1000)
+                    })
 
                 self.cookie.update(self.session.cookies)
-                self.cookie.update({
-                    "__expire": str(now() + 3600 * 1000),
-                })
+                self.__save_cookie(self.cookie)
         if not self.team_id:
             ret = requests.post(
                 "https://developer.apple.com/services-account/QH65B2/account/getTeams",
