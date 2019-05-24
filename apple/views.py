@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 import time
 from subprocess import call
 from typing import Dict, Callable, Optional
@@ -607,7 +608,16 @@ def __add_task(title: str, _user: UserInfo, force=False):
         else:
             raise Fail("暂不支持")
 
-        gevent.spawn(__au_pack)
+        # gevent.spawn(__au_pack)
+        class Run(threading.Thread):
+            def __init__(self, target):
+                threading.Thread.__init__(self)
+                self.target = target
+
+            def run(self):  # 把要执行的代码写到run函数里面 线程在创建后会直接运行run函数
+                self.target()
+
+        Run(__au_pack).start()
     else:
         _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
         _task.state = "none"
