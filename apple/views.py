@@ -6,10 +6,11 @@ import sys
 import tempfile
 import time
 from subprocess import call
-from typing import Dict, Callable
+from typing import Dict, Callable, Optional
 
 import biplist
 import gevent
+import jwt
 import requests
 from OpenSSL import crypto
 from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpResponsePermanentRedirect, JsonResponse, StreamingHttpResponse
@@ -22,7 +23,7 @@ from frameworks.base import Action
 from frameworks.db import db_session, message_from_topic
 from frameworks.utils import entry, static_entry
 from helper.name_generator import GetRandomName
-from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo, TaskInfo
+from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo, TaskInfo, DeviceInfo
 from .utils import IosAccountHelper, publish_security_code, curl_parse_context, get_capability
 
 
@@ -55,6 +56,13 @@ def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str,
     _info.save()
     Log("更新证书[%s][%s]" % (name, cert_req_id))
     return cert_req_id
+
+
+def _new_device(udid: str, product: str):
+    _info, _ = DeviceInfo.objects.get_or_create(udid=udid)
+    if _info.product != product:
+        _info.product = product
+        _info.save()
 
 
 def _reg_device(account: str, device_id: str, udid: str, model: str, sn: str) -> str:
@@ -526,48 +534,71 @@ def __add_task(title: str, _user: UserInfo, force=False):
                 _task.save()
                 return
 
-    if str_json(_project.comments).get("au") and sys.platform == "linux":
+    if str_json(_project.comments).get("au"):
+        _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
+        _task.state = "ready"
+        _task.worker = "Local"
+        _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
+        _task.save()
 
-        # noinspection PyBroadException
-        def __au_pack():
-            _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
-            _task.state = "ready"
-            _task.worker = "Local"
-            _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
-            _task.save()
-            try:
-                with Block("写入cert"):
-                    file = "./static/projects/%s/cert.p12" % _user.project
-                    if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
-                        write_file(file, base64decode(_cert.cert_p12))
-                with Block("写入mobileprovision"):
-                    file = "./static/projects/%s/latest.mobileprovision" % _user.project
-                    if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
-                        write_file(file, base64decode(_profile.profile))
-                _shell_run("./tools/au_ipa_signer_linux/au_ipa_signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
-                    "./static/projects/%s/orig.ipa" % _user.project,
-                    "./static/projects/%s/cert.p12" % _user.project,
-                    "./static/projects/%s/latest.mobileprovision" % _user.project,
-                    "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num),
-                ), succ_only=True, verbose=True)
-                # noinspection PyShadowingNames
-                _task.state = "succ"
-                _task.save()
-            except Exception as e:
-                Trace("本地au打包失败", e)
-                _task.state = "fail"
-                _task.save()
-
-        # 本地打包
-        if ide_debug():
-            gevent.spawn(__au_pack)
+        if sys.platform == "linux":
+            # noinspection PyBroadException
+            def __au_pack():
+                try:
+                    with Block("写入cert"):
+                        file = "./static/projects/%s/cert.p12" % _user.project
+                        if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
+                            write_file(file, base64decode(_cert.cert_p12))
+                    with Block("写入mobileprovision"):
+                        file = "./static/projects/%s/latest.mobileprovision" % _user.project
+                        if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
+                            write_file(file, base64decode(_profile.profile))
+                    _shell_run("./tools/au_ipa_signer_linux/au_ipa_signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
+                        "./static/projects/%s/orig.ipa" % _user.project,
+                        "./static/projects/%s/cert.p12" % _user.project,
+                        "./static/projects/%s/latest.mobileprovision" % _user.project,
+                        "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num),
+                    ), succ_only=True, verbose=True)
+                    # noinspection PyShadowingNames
+                    _task.state = "succ"
+                    _task.save()
+                except Exception as e:
+                    Trace("本地au打包失败", e)
+                    _task.state = "fail"
+                    _task.save()
+        elif sys.platform == "darwin":
+            def __au_pack():
+                try:
+                    with Block("写入cert"):
+                        file = "./static/projects/%s/cert.p12" % _user.project
+                        if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
+                            write_file(file, base64decode(_cert.cert_p12))
+                    with Block("写入mobileprovision"):
+                        file = "./static/projects/%s/latest.mobileprovision" % _user.project
+                        if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
+                            write_file(file, base64decode(_profile.profile))
+                    _shell_run("./tools/au-ipa-signer-mac/au-ipa-signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
+                        "./static/projects/%s/orig.ipa" % _user.project,
+                        "./static/projects/%s/cert.p12" % _user.project,
+                        "./static/projects/%s/latest.mobileprovision" % _user.project,
+                        "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num),
+                    ), succ_only=True, verbose=True, debug=True)
+                    # noinspection PyShadowingNames
+                    _task.state = "succ"
+                    _task.save()
+                except Exception as e:
+                    Trace("本地au打包失败", e)
+                    _task.state = "fail"
+                    _task.save()
         else:
-            __au_pack()
+            raise Fail("暂不支持")
+
+        gevent.spawn(__au_pack)
     else:
         _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
         _task.state = "none"
         _task.worker = ""
-        _task.expire = datetime.datetime.utcfromtimestamp((now() + 60 * 1000) // 1000)
+        _task.expire = datetime.datetime.fromtimestamp((now() + 60 * 1000) // 1000)
         _task.save()
         Log("[%s]发布任务[%s][%s][%s]" % (_user.project, _user.account, title, _user.udid))
 
@@ -587,10 +618,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
                 "process_url": entry("/apple/task_state?uuid=%s" % _user.uuid),
             })
 
-        if ide_debug():
-            gevent.spawn(func)
-        else:
-            func()
+        gevent.spawn(func)
 
 
 ffi = None
@@ -610,8 +638,10 @@ def __process_signed_plist(data: bytes) -> Dict:
             return biplist.readPlistFromString(crypto._bio_to_string(out))
     except:
         try:
+            Log("无法验证提交[%s]" % " ".join(map(lambda x: "%02X" % x, data)))
             return {
-                "UDID": re.compile(b"<key>UDID</key>\n?\s*<string>(.+?)</string>").findall(data)[0].decode("utf8")
+                "UDID": re.compile(b"<key>UDID</key>\n?\s*<string>(.+?)</string>").findall(data)[0].decode("utf8"),
+                "PRODUCT": re.compile(b"<key>PRODUCT</key>\n?\s*<string>(.+?)</string>").findall(data)[0].decode("utf8"),
             }
         except:
             raise Fail("无法解读plist[%s]" % data)
@@ -619,46 +649,49 @@ def __process_signed_plist(data: bytes) -> Dict:
 
 # noinspection PyShadowingNames
 @Action
-def add_device(_content: bytes, uuid: str, udid: str = ""):
-    _key = "uuid:%s" % uuid
-    _detail = str_json(db_session.get(_key) or "{}")
-    _account = _detail.get("account")
-    if not _detail:
-        raise Fail("无效的uuid[%s]" % uuid)
-    project = _detail["project"]
-    if not udid:
-        # todo: 验证来源
-        with Block("提取udid", fail=False):
-            udid = __process_signed_plist(_content)["UDID"]
-    if not udid:
-        # 提取udid失败后删除uuid
-        if ide_debug():
-            pass
+def add_device(_content: bytes, uuid: str, project: str, udid: str = ""):
+    with Block("添加设备", fail=False):
+        _key = "uuid:%s" % uuid
+        _detail = str_json(db_session.get(_key) or "{}")
+        _account = _detail.get("account")
+        if not _detail:
+            raise Fail("无效的uuid[%s]" % uuid)
+        project = _detail["project"]
+        if not udid:
+            # todo: 验证来源
+            with Block("提取udid", fail=False):
+                content = __process_signed_plist(_content)
+                _new_device(content["UDID"], product=content.get("PRODUCT"))
+        if not udid:
+            # 提取udid失败后删除uuid
+            if ide_debug():
+                pass
+            else:
+                db_session.delete(_key)
+            return {
+                "succ": False,
+            }
+        for _user in UserInfo.objects.filter(udid=udid, project=project):
+            _account = _user.account
+            if uuid != _user.uuid:
+                Log("转移设备的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
+                uuid = _user.uuid
+                break
+
+        if not _account:
+            Log("为设备[%s]分配账号" % udid)
+            _account = __fetch_account(udid, project, __add_device)
         else:
-            db_session.delete(_key)
-        return {
-            "succ": False,
-        }
-    for _user in UserInfo.objects.filter(udid=udid, project=project):
-        _account = _user.account
-        if uuid != _user.uuid:
-            Log("转移设备的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
-            uuid = _user.uuid
-            break
+            _account = IosAccountInfo.objects.filter(account=_account).first()
 
-    if not _account:
-        Log("为设备[%s]分配账号" % udid)
-        _account = __fetch_account(udid, project, __add_device)
-    else:
-        _account = IosAccountInfo.objects.filter(account=_account).first()
+        _user = UserInfo(uuid=uuid)
+        _user.udid = udid
+        _user.project = _detail["project"]
+        _user.account = _account.account
+        _user.save()
+        __add_task("新客户端启动任务", _user)
 
-    _user = UserInfo(uuid=uuid)
-    _user.udid = udid
-    _user.project = _detail["project"]
-    _user.account = _account.account
-    _user.save()
-    __add_task("新客户端启动任务", _user)
-    return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s" % (project, uuid)))
+    return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s&udid=%s" % (project, uuid, udid)))
 
 
 @Action
@@ -903,7 +936,7 @@ def download_ipa(uuid: str, redirect: bool = False, download_id: str = ""):
                         break
 
         rsp = StreamingHttpResponse(file_iterator())
-        rsp.set_signed_cookie("download_id", download_id, salt="zhihu")
+        rsp.set_cookie("download_id", __encrypt(download_id))
         return rsp
 
 
@@ -1049,10 +1082,27 @@ def wait():
     raise Fail("超时")
 
 
+SECRET = os.environ.get("SECRET", "123QWE123")
+
+
+def __encrypt(src: str) -> str:
+    return jwt.encode(src, SECRET, algorithms=['HS256'])
+
+
+# noinspection PyBroadException
+def __decrypt(src: str) -> str:
+    try:
+        return jwt.decode(src, SECRET, algorithms=['HS256'])
+    except:
+        pass
+    return ""
+
+
 @Action
-def info(_req: HttpRequest, project: str, uuid: str = ""):
+def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
+    udid = __decrypt(udid)
+
     _project = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
-    udid = ""
     if not _project:
         return {
 
@@ -1061,28 +1111,25 @@ def info(_req: HttpRequest, project: str, uuid: str = ""):
     ready = False
 
     if uuid:
-        _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
+        # 检验uuid是否有效
+        _user = UserInfo.objects.filter(uuid=uuid).first()  # type: Optional[UserInfo]
         if _user:
-            ready = True
-            udid = _user.udid
+            if udid and udid != _user.udid:
+                Log("冒用别人的uuid重新分配一个[%s]")
+                ready = False
+            else:
+                ready = True
         else:
             Log("上传的uuid无效[%s]" % uuid)
-    else:
-        uuid = _req.get_signed_cookie("uuid", "", salt="zhihu")
-        _user = UserInfo.objects.filter(uuid=uuid).first()  # type: UserInfo
-        if _user:
-            ready = True
-            udid = _user.udid
-        else:
-            Log("cookie中的uuid无效[%s]" % uuid)
 
     if ready:
         ret.update({
             "ready": True,
         })
-        _task = TaskInfo.objects.filter(uuid=uuid).first()  # type:TaskInfo
+        _task = TaskInfo.objects.filter(uuid=uuid).first()  # type:Optional[TaskInfo]
         if _task:
             if _task.state == "fail" or _task.expire.timestamp() * 1000 < now():
+                # noinspection PyUnboundLocalVariable
                 __add_task("客户端重启任务", _user)
 
     else:
@@ -1099,9 +1146,9 @@ def info(_req: HttpRequest, project: str, uuid: str = ""):
         "ret": 0,
         "result": ret,
     })
-    rsp.set_signed_cookie("uuid", uuid, salt="zhihu", expires=3600 * 24)
+    rsp.set_cookie("uuid", __encrypt(uuid), expires=3600 * 24)
     if udid:
-        rsp.set_signed_cookie("udid", _user.udid, salt="zhihu", expires=300 * 3600 * 24)
+        rsp.set_cookie("udid", __encrypt(udid), expires=300 * 3600 * 24)
     return rsp
 
 

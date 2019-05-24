@@ -225,11 +225,6 @@ def _shell_run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_l
                 if p.stderr.readable():
                     buffer_err.extend(p.stderr.readlines())
 
-    if succ_only:
-        if p.returncode == 0:
-            pass
-        else:
-            raise Fail("命令[%s]执行失败" % cmd)
     if p.stdout and p.stdout.readable():
         buffer.extend(p.stdout.readlines())
     if p.stderr and p.stderr.readable():
@@ -249,8 +244,8 @@ def _shell_run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_l
     #     if err_last:
     #         for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
     #             yield each.rstrip("\r\n")
+    tmp = []
     if debug:
-        tmp = []
         for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
             Log("- %s" % each.rstrip("\r\n"))
             tmp.append(each.rstrip("\r\n"))
@@ -258,15 +253,19 @@ def _shell_run(cmd: str, timeout=30000, succ_only=False, include_err=True, err_l
             for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
                 Log("* %s" % each.rstrip("\r\n"))
                 tmp.append(each.rstrip("\r\n"))
-        return tmp
     else:
-        tmp = []
         for each in map(lambda x: x.decode("utf8"), buffer):  # type:str
             tmp.append(each.rstrip("\r\n"))
         if err_last:
             for each in map(lambda x: x.decode("utf8"), buffer_err):  # type:str
                 tmp.append(each.rstrip("\r\n"))
-        return tmp
+
+    if succ_only:
+        if p.returncode == 0:
+            pass
+        else:
+            raise Fail("命令[%s]执行失败" % cmd)
+    return tmp
 
 
 # noinspection SpellCheckingInspection

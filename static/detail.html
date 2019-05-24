@@ -76,7 +76,7 @@
     document.onreadystatechange = documentReadyState;
 
     function documentReadyState() {
-        if (document.readyState == "complete") {
+        if (document.readyState === "complete") {
             completed();
             window.clearInterval(rsid);
         } else {
@@ -381,6 +381,7 @@ require.resourceMap({
             url: "/apple/info",
             data: {
                 project: project,
+                udid: getUrlParam('udid') || "",
                 uuid: getUrlParam('uuid') || "",
             },
             complete: function (rsp) {

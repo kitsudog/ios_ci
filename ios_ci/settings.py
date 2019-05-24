@@ -13,7 +13,7 @@ import os
 
 from celery.schedules import crontab
 
-from base.style import Log
+from base.style import Log, ide_debug
 from frameworks.utils import valid_host, static_entry
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "127.0.0.1")

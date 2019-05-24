@@ -30,6 +30,16 @@ class IosAccountInfo(models.Model):
     phone = models.CharField("绑定手机", max_length=128, blank=True, help_text="二次验证用的")
 
 
+class DeviceInfo(models.Model):
+    class Meta:
+        db_table = "device_info"
+        verbose_name_plural = '设备'
+
+    udid = models.CharField("设备udid", max_length=128, primary_key=True)
+    product = models.CharField("设备名", max_length=128, db_index=True, blank=False)
+    create = models.DateTimeField("登记时间", auto_now=True)
+
+
 class IosDeviceInfo(models.Model):
     """
     针对某个设备的
