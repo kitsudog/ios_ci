@@ -17,7 +17,7 @@ from django.http import HttpResponseRedirect, HttpResponse, HttpRequest, HttpRes
 
 from apple.tasks import resign_ipa, print_hello, _shell_run
 from base.helper import ipa_inspect
-from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug, str_json_a
+from base.style import str_json, Assert, json_str, Log, now, Block, Fail, Trace, tran, to_form_url, ide_debug, str_json_a, ExFalse
 from base.utils import base64decode, md5bytes, base64, read_binary_file, random_str, write_file
 from frameworks.base import Action
 from frameworks.db import db_session, message_from_topic
@@ -58,10 +58,20 @@ def _reg_cert(_config: IosAccountInfo, cert_req_id, name, cert_id, sn, type_str,
     return cert_req_id
 
 
-def _new_device(udid: str, product: str):
+def _new_device(udid: str, product: str, imei: str):
     _info, _ = DeviceInfo.objects.get_or_create(udid=udid)
-    if _info.product != product:
+    if _:
+        Log("新的ios设备[%s][%s]" % (udid, product))
+    dirty = False
+    if product and _info.product != product:
         _info.product = product
+        dirty = True
+    if imei:
+        imei = imei.replace(" ", "")
+        if _info.imei != imei:
+            _info.imei = imei
+            dirty = True
+    if dirty:
         _info.save()
 
 
@@ -642,6 +652,7 @@ def __process_signed_plist(data: bytes) -> Dict:
             return {
                 "UDID": re.compile(b"<key>UDID</key>\n?\s*<string>(.+?)</string>").findall(data)[0].decode("utf8"),
                 "PRODUCT": re.compile(b"<key>PRODUCT</key>\n?\s*<string>(.+?)</string>").findall(data)[0].decode("utf8"),
+                "IMEI": re.compile(b"<key>IMEI</key>\n?\s*<string>(.+?)</string>").findall(data)[0].decode("utf8"),
             }
         except:
             raise Fail("无法解读plist[%s]" % data)
@@ -649,40 +660,36 @@ def __process_signed_plist(data: bytes) -> Dict:
 
 # noinspection PyShadowingNames
 @Action
-def add_device(_content: bytes, uuid: str, project: str, udid: str = ""):
+def add_device(_content: bytes, uuid: str, udid: str = "", project: str = ""):
+    """
+    curl 'localhost:8000/apple/add_device?uuid=test' -d @add_device
+    """
     with Block("添加设备", fail=False):
         _key = "uuid:%s" % uuid
         _detail = str_json(db_session.get(_key) or "{}")
         _account = _detail.get("account")
-        if not _detail:
-            raise Fail("无效的uuid[%s]" % uuid)
-        project = _detail["project"]
         if not udid:
             # todo: 验证来源
             with Block("提取udid", fail=False):
                 content = __process_signed_plist(_content)
-                _new_device(content["UDID"], product=content.get("PRODUCT"))
-        if not udid:
-            # 提取udid失败后删除uuid
-            if ide_debug():
-                pass
-            else:
-                db_session.delete(_key)
-            return {
-                "succ": False,
-            }
+                _new_device(content["UDID"], product=content.get("PRODUCT"), imei=content.get("IMEI"))
+        if not _detail:
+            raise Fail("无效的uuid[%s]转发至test工程" % uuid)
+        project = _detail["project"]
+        Assert(bool(udid), "udid没有就没意义了")
         for _user in UserInfo.objects.filter(udid=udid, project=project):
             _account = _user.account
             if uuid != _user.uuid:
-                Log("转移设备的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
+                Log("采用已经存在的[%s]的uuid[%s]=>[%s]" % (udid, uuid, _user.uuid))
                 uuid = _user.uuid
                 break
-
-        if not _account:
-            Log("为设备[%s]分配账号" % udid)
-            _account = __fetch_account(udid, project, __add_device)
-        else:
-            _account = IosAccountInfo.objects.filter(account=_account).first()
+        with Block("分配账号"):
+            # todo: 后置到打包阶段
+            if not _account:
+                Log("为设备[%s]分配账号" % udid)
+                _account = __fetch_account(udid, project, __add_device)
+            else:
+                _account = IosAccountInfo.objects.filter(account=_account).first()
 
         _user = UserInfo(uuid=uuid)
         _user.udid = udid
@@ -690,8 +697,10 @@ def add_device(_content: bytes, uuid: str, project: str, udid: str = ""):
         _user.account = _account.account
         _user.save()
         __add_task("新客户端启动任务", _user)
-
-    return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s&udid=%s" % (project, uuid, udid)))
+    if project:
+        return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s&udid=%s" % (project, uuid, udid)))
+    else:
+        return HttpResponsePermanentRedirect(entry("/detail.php?project=test&udid=%s" % udid))
 
 
 @Action
@@ -1086,13 +1095,14 @@ SECRET = os.environ.get("SECRET", "123QWE123")
 
 
 def __encrypt(src: str) -> str:
-    return jwt.encode(src, SECRET, algorithms=['HS256'])
+    return jwt.encode({"value": src}, SECRET, algorithm='HS256')
 
 
 # noinspection PyBroadException
 def __decrypt(src: str) -> str:
     try:
-        return jwt.decode(src, SECRET, algorithms=['HS256'])
+        if src:
+            return jwt.decode(src, SECRET, algorithm='HS256')["value"]
     except:
         pass
     return ""
@@ -1105,7 +1115,7 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
     _project = IosProjectInfo.objects.filter(project=project).first()  # type: IosProjectInfo
     if not _project:
         return {
-
+            "error_msg": "没找到指定的项目",
         }
     ret = str_json(_project.comments)
     ready = False
@@ -1114,19 +1124,25 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
         # 检验uuid是否有效
         _user = UserInfo.objects.filter(uuid=uuid).first()  # type: Optional[UserInfo]
         if _user:
-            if udid and udid != _user.udid:
-                Log("冒用别人的uuid重新分配一个[%s]")
-                ready = False
+            if udid:
+                if _user.udid:
+                    if udid != _user.udid:
+                        Log("冒用别人的uuid重新分配一个[%s]")
+                        ready = False
+                else:
+                    _user.udid = udid
+                    _user.save()
+                    ready = True
             else:
-                ready = True
+                ready = False
         else:
-            Log("上传的uuid无效[%s]" % uuid)
+            ready = ExFalse("上传的uuid无效[%s]" % uuid, log=True)
 
     if ready:
         ret.update({
             "ready": True,
         })
-        _task = TaskInfo.objects.filter(uuid=uuid).first()  # type:Optional[TaskInfo]
+        _task = TaskInfo.objects.filter(uuid=uuid).first()  # type: Optional[TaskInfo]
         if _task:
             if _task.state == "fail" or _task.expire.timestamp() * 1000 < now():
                 # noinspection PyUnboundLocalVariable
@@ -1145,6 +1161,8 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
     rsp = JsonResponse({
         "ret": 0,
         "result": ret,
+    }, json_dumps_params={
+        "ensure_ascii": False,
     })
     rsp.set_cookie("uuid", __encrypt(uuid), expires=3600 * 24)
     if udid:

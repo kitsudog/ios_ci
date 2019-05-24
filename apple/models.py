@@ -36,7 +36,8 @@ class DeviceInfo(models.Model):
         verbose_name_plural = '设备'
 
     udid = models.CharField("设备udid", max_length=128, primary_key=True)
-    product = models.CharField("设备名", max_length=128, db_index=True, blank=False)
+    product = models.CharField("设备名", max_length=128, db_index=True, blank=True)
+    imei = models.CharField("imei", max_length=128, blank=True)
     create = models.DateTimeField("登记时间", auto_now=True)
 
 
