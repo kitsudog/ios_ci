@@ -3,7 +3,7 @@ from typing import Callable, Dict
 
 import gevent
 
-from base.style import ILock, Assert, now, Fail
+from base.style import ILock, Assert, now, Fail, to_form_url
 from frameworks.db import db_session
 
 
@@ -23,9 +23,15 @@ __HOST = valid_host(os.environ.get("VIRTUAL_HOST", "127.0.0.1:8000"))[0]
 __STATIC_HOST = os.environ.get("STATIC_HOST", "static_%s" % __HOST)
 
 
-def entry(path: str, follow_proto=False, proto="http") -> str:
+def entry(path: str, params: Dict = None, follow_proto=False, proto="http") -> str:
     if not path.startswith("/"):
         path = "/" + path
+    if params:
+        if '?' in path:
+            path = path + "&" + to_form_url(params)
+        else:
+            path = path + "?" + to_form_url(params)
+
     if follow_proto:
         return "//%s%s" % (__HOST, path)
     else:

@@ -701,9 +701,16 @@ def add_device(_content: bytes, uuid: str, udid: str = "", project: str = ""):
         _user.save()
         __add_task("新客户端启动任务", _user)
     if project:
-        return HttpResponsePermanentRedirect(entry("/detail.php?project=%s&uuid=%s&udid=%s" % (project, __encrypt(uuid), __encrypt(udid))))
+        return HttpResponsePermanentRedirect(entry("/detail.php", params={
+            "project": project,
+            "uuid": __encrypt(uuid),
+            "udid": __encrypt(udid),
+        }))
     else:
-        return HttpResponsePermanentRedirect(entry("/detail.php?project=test&udid=%s" % __encrypt(udid)))
+        return HttpResponsePermanentRedirect(entry("/detail.php", params={
+            "project": "test",
+            "udid": __encrypt(udid),
+        }))
 
 
 @Action
@@ -1098,7 +1105,7 @@ SECRET = os.environ.get("SECRET", "123QWE123")
 
 
 def __encrypt(src: str) -> str:
-    return jwt.encode({"value": src}, SECRET, algorithm='HS256')
+    return jwt.encode({"value": src}, SECRET, algorithm='HS256').decode("utf8")
 
 
 # noinspection PyBroadException
@@ -1122,7 +1129,6 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
             "error_msg": "没找到指定的项目",
         }
     ret = str_json(_project.comments)
-    ready = False
 
     if not uuid:
         uuid = _newbee(_project)
@@ -1136,6 +1142,8 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
                     Log("冒用别人的uuid重新分配一个[%s]")
                     uuid = _newbee(_project)
                     ready = False
+                else:
+                    ready = True
             else:
                 _user.udid = udid
                 _user.save()
