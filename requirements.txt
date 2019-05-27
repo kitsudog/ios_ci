@@ -12,7 +12,7 @@ hyper
 mysqlclient
 biplist
 uncurl
-pyjwt
+pyjwt=1.7.1
 celery[redis,gevent]
 flower
 pyopenssl
