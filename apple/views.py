@@ -561,6 +561,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
             # noinspection PyBroadException
             def __au_pack():
                 try:
+                    _start = now()
                     with Block("写入cert"):
                         file = "./static/projects/%s/cert.p12" % _user.project
                         if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
@@ -577,7 +578,9 @@ def __add_task(title: str, _user: UserInfo, force=False):
                     ), succ_only=True, verbose=True)
                     # noinspection PyShadowingNames
                     _task.state = "succ"
+                    _task.expire = 0
                     _task.save()
+                    Log("任务[%s][%s][%s][%ss]完毕" % (_task.uuid, _user.project, _account.devices_num, now() - _start))
                 except Exception as e:
                     Trace("本地au打包失败", e)
                     _task.state = "fail"
@@ -585,6 +588,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
         elif sys.platform == "darwin":
             def __au_pack():
                 try:
+                    _start = now()
                     with Block("写入cert"):
                         file = "./static/projects/%s/cert.p12" % _user.project
                         if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_cert.cert_p12)):
@@ -593,6 +597,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
                         file = "./static/projects/%s/latest.mobileprovision" % _user.project
                         if not os.path.exists(file) or md5bytes(read_binary_file(file)) != md5bytes(base64decode(_profile.profile)):
                             write_file(file, base64decode(_profile.profile))
+
                     _shell_run("./tools/au-ipa-signer-mac/au-ipa-signer -s %s -c %s -m %s -o %s -p q1w2e3r4" % (
                         "./static/projects/%s/orig.ipa" % _user.project,
                         "./static/projects/%s/cert.p12" % _user.project,
@@ -601,7 +606,9 @@ def __add_task(title: str, _user: UserInfo, force=False):
                     ), succ_only=True, verbose=True, debug=True)
                     # noinspection PyShadowingNames
                     _task.state = "succ"
+                    _task.expire = 0
                     _task.save()
+                    Log("任务[%s][%s][%s][%ss]完毕" % (_task.uuid, _user.project, _account.devices_num, now() - _start))
                 except Exception as e:
                     Trace("本地au打包失败", e)
                     _task.state = "fail"
@@ -1187,9 +1194,7 @@ def info(_req: HttpRequest, project: str, uuid: str = "", udid: str = ""):
         })
         _task = TaskInfo.objects.filter(uuid=uuid).first()  # type: Optional[TaskInfo]
         if _task:
-            if _task.state == "fail" or _task.expire.timestamp() * 1000 < now():
-                # noinspection PyUnboundLocalVariable
-                __add_task("客户端重启任务", _user)
+            __add_task("客户端重启任务", _user)
         Log("项目[%s]有一个udid[%s]访问" % (udid, project))
     else:
         ret.update({
