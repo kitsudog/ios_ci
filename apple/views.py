@@ -27,6 +27,8 @@ from helper.name_generator import GetRandomName
 from .models import IosDeviceInfo, IosAppInfo, IosCertInfo, IosProfileInfo, IosAccountInfo, UserInfo, IosProjectInfo, TaskInfo, DeviceInfo
 from .utils import IosAccountHelper, publish_security_code, curl_parse_context, get_capability
 
+ZERO_DATETIME = datetime.datetime.utcfromtimestamp(0)
+
 
 def _reg_app(_config: IosAccountInfo, project: str, app_id_id: str, name: str, prefix: str, identifier: str):
     sid = "%s:%s" % (_config.account, project)
@@ -539,15 +541,19 @@ def __add_task(title: str, _user: UserInfo, force=False):
         # 是否可以跳过
         devices = str_json_a(_profile.devices)
         if _user.udid in devices:
-            filepath = "income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num)
+            filepath = "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num)
             if os.path.exists(filepath):
                 Log("[%s][%s]已经有包了跳过打包" % (_user.project, _user.uuid))
                 _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
                 _task.state = "succ"
                 _task.worker = "-"
-                _task.expire = 0
+                _task.expire = ZERO_DATETIME
                 _task.save()
                 return
+    else:
+        filepath = "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num)
+        if os.path.exists(filepath):
+            os.remove(filepath)
 
     if str_json(_project.comments).get("au"):
         _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
@@ -578,7 +584,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
                     ), succ_only=True, verbose=True)
                     # noinspection PyShadowingNames
                     _task.state = "succ"
-                    _task.expire = 0
+                    _task.expire = ZERO_DATETIME
                     _task.save()
                     Log("任务[%s][%s][%s][%ss]完毕" % (_task.uuid, _user.project, _account.devices_num, now() - _start))
                 except Exception as e:
@@ -606,7 +612,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
                     ), succ_only=True, verbose=True, debug=True)
                     # noinspection PyShadowingNames
                     _task.state = "succ"
-                    _task.expire = 0
+                    _task.expire = ZERO_DATETIME
                     _task.save()
                     Log("任务[%s][%s][%s][%ss]完毕" % (_task.uuid, _user.project, _account.devices_num, now() - _start))
                 except Exception as e:
