@@ -524,10 +524,11 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
 
 def __add_task(title: str, _user: UserInfo, force=False):
     _account = IosAccountInfo.objects.get(account=_user.account)
+    _config = IosAccountHelper(IosAccountInfo.objects.get(account=_user.account))
     _project = IosProjectInfo.objects.get(project=_user.project)
     _profile = IosProfileInfo.objects.get(sid="%s:%s" % (_user.account, _user.project))
     if not str_json_a(_profile.certs):
-        __profile_detail(_account, _profile)
+        __profile_detail(_config, _profile)
     _cert = IosCertInfo.objects.get(sid="%s:%s" % (_user.account, str_json_a(_profile.certs)[0]))
     Assert(_profile, "[%s][%s]证书无效" % (_project.project, _account.account))
     Assert(_project.md5sum, "项目[%s]原始ipa还没上传" % _project.project)
