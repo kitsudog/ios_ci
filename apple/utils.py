@@ -341,6 +341,12 @@ def curl_parse_context(curl_command):
     method = "get"
 
     tokens = shlex.split(curl_command)
+
+    # noinspection PyUnusedLocal
+    def no_exit(*args, **kwargs):
+        pass
+
+    parser.exit = no_exit
     parsed_args = parser.parse_args(tokens)
 
     post_data = parsed_args.data or parsed_args.data_binary
