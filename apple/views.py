@@ -7,7 +7,7 @@ import tempfile
 import threading
 import time
 from subprocess import call
-from typing import Dict, Callable, Optional
+from typing import Dict, Callable, Optional, Tuple
 
 import biplist
 import gevent
@@ -243,7 +243,7 @@ def __profile_detail(_config: IosAccountHelper, _profile: IosProfileInfo):
         _profile.save()
 
 
-def __list_all_profile(_config: IosAccountHelper, target_project: str = ""):
+def __list_all_profile(_config: IosAccountHelper, target_project: str = "") -> Tuple[Dict, IosProfileInfo]:
     ret = _config.post(
         "更新列表",
         "https://developer.apple.com/services-account/QH65B2/account/ios/profile/listProvisioningProfiles.action?teamId=",
@@ -404,6 +404,7 @@ def __list_all_devices(_config: IosAccountHelper):
 def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
     title = "设备%s" % udid
     _config = IosAccountHelper(account)
+    device = {}
     try:
         if udid not in account.devices:
             # 先注册设备
@@ -454,6 +455,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                 _info.project = project
 
             devices = str_json_a(_info.devices)
+            device_map = str_json(_config.info.devices)
 
             if udid in devices:
                 pass
@@ -465,6 +467,10 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                 _cert = _get_cert(_config.info)
                 _app = _get_app(_config, project)
                 found = False
+                if device:
+                    device_map.update({
+                        udid: device["deviceId"],
+                    })
                 for each in ret["provisioningProfiles"]:  # type: Dict
                     if each["name"] != "专用 %s" % project:
                         continue
@@ -480,7 +486,7 @@ def __add_device(account: IosAccountInfo, udid: str, project: str) -> bool:
                             "provisioningProfileName": each["name"],
                             "appIdId": _app.app_id_id,
                             "certificateIds": _cert.cert_req_id,
-                            "deviceIds": ",".join(map(lambda x: str_json(_config.info.devices)[x], devices)),
+                            "deviceIds": ",".join(map(lambda x: device_map[x], devices)),
                         }, csrf=True)
                     Assert(ret["resultCode"] == 0)
                     _info.devices = json_str(devices)
@@ -543,7 +549,7 @@ def __add_task(title: str, _user: UserInfo, force=False):
         if _user.udid in devices:
             filepath = "./static/income/%s/%s_%s.ipa" % (_user.project, _account.team_id, _account.devices_num)
             if os.path.exists(filepath):
-                Log("[%s][%s]已经有包了跳过打包" % (_user.project, _user.uuid))
+                Log("[%s][%s][%s]已经有包了跳过打包" % (_user.project, _user.uuid, _account.devices_num))
                 _task, _ = TaskInfo.objects.get_or_create(uuid=_user.uuid)
                 _task.state = "succ"
                 _task.worker = "-"
